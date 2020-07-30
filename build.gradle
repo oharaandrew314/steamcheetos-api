@@ -17,7 +17,7 @@ ext {
     ver = [
             slf4j: '1.7.30',
             javalin: '3.9.0',
-            moshi: '1.9.3'
+            jackson: '2.11.1'
     ]
 }
 
@@ -28,8 +28,8 @@ dependencies {
     implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.20'
     implementation group: 'io.javalin', name: 'javalin', version: ver.javalin
     implementation group: 'io.javalin', name: 'javalin-openapi', version: ver.javalin
-    implementation group: 'com.squareup.moshi', name: 'moshi', version: ver.moshi
-    implementation group: 'com.squareup.moshi', name: 'moshi-kotlin', version: ver.moshi
+    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-kotlin-module', version: ver.jackson
+    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr353', version: ver.jackson
 
     // Logging
     implementation group: 'log4j', name: 'log4j', version: '1.2.17'

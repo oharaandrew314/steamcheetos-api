@@ -1,17 +1,14 @@
 package io.andrewohara.cheetosbros.sources.openxbl
 
-import com.squareup.moshi.FromJson
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.ToJson
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.andrewohara.cheetosbros.sources.*
 import java.lang.IllegalStateException
-import java.math.BigDecimal
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.time.Instant
 
 /**
  * https://xbl.io/
@@ -20,17 +17,9 @@ class OpenXblSource(private val apiKey: String): Source {
     companion object {
 
         private const val host = "https://xbl.io/api/v2"
-        private val mapper = Moshi.Builder()
-                .add(KotlinJsonAdapterFactory())
-                .add(object {
-                    @FromJson fun fromJson(string: String) = BigDecimal(string)
-                    @ToJson fun toJson(value: BigDecimal) = value.toString()
-                })
-                .add(object {
-                    @FromJson fun fromJson(string: String) = Instant.parse(string)
-                    @ToJson fun toJson(value: Instant) = value.toString()
-                })
-                .build()
+        private val mapper = jacksonObjectMapper()
+                .registerModule(JavaTimeModule())
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     }
 
     private val client = HttpClient.newHttpClient()
@@ -51,7 +40,7 @@ class OpenXblSource(private val apiKey: String): Source {
             return null
         }
 
-        val user = mapper.adapter(SearchFriendResponse::class.java).fromJson(response.body())!!
+        val user = mapper.readValue(response.body(), SearchFriendResponse::class.java)
                 .profileUsers
                 .firstOrNull { it.settings.any { setting -> setting.id == "Gamertag" && setting.value.equals(username, ignoreCase = true) } }
                 ?: return null
@@ -71,7 +60,7 @@ class OpenXblSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        return mapper.adapter(ListGamesResponse::class.java).fromJson(response.body())!!
+        return mapper.readValue(response.body(), ListGamesResponse::class.java)
                 .titles
                 .filter { it.type == "Game" }
                 .filter { it.achievement.totalGamerscore > 0 }
@@ -90,7 +79,7 @@ class OpenXblSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        return mapper.adapter(ListAchievementsResponse::class.java).fromJson(response.body())!!
+        return mapper.readValue(response.body(), ListAchievementsResponse::class.java)
                 .achievements
                 .map { Achievement(
                         id = it.id, name = it.name, description = it.lockedDescription, hidden = it.isSecret,
@@ -111,7 +100,7 @@ class OpenXblSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        return mapper.adapter(ListAchievementsResponse::class.java).fromJson(response.body())!!
+        return mapper.readValue(response.body(), ListAchievementsResponse::class.java)
                 .achievements
                 .map { AchievementStatus(
                         id = it.id,
