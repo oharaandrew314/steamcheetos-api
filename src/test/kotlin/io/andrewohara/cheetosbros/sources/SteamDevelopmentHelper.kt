@@ -1,5 +1,6 @@
 package io.andrewohara.cheetosbros.sources
 
+import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import org.junit.Before
 import org.junit.Test
 

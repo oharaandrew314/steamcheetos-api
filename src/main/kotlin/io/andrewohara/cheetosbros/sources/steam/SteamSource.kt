@@ -1,7 +1,11 @@
-package io.andrewohara.cheetosbros.sources
+package io.andrewohara.cheetosbros.sources.steam
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.andrewohara.cheetosbros.sources.Achievement
+import io.andrewohara.cheetosbros.sources.AchievementStatus
+import io.andrewohara.cheetosbros.sources.Game
+import io.andrewohara.cheetosbros.sources.Source
 import java.lang.IllegalStateException
 import java.net.URI
 import java.net.http.HttpClient
@@ -53,7 +57,7 @@ class SteamSource(private val apiKey: String): Source {
                 .game
                 .availableGameStats
                 .achievements
-                .map { Achievement(id=it.name, name = it.displayName, hidden = it.hidden == 1, icons = listOf(it.icon, it.icongray), description = it.description) }
+                .map { Achievement(id = it.name, name = it.displayName, hidden = it.hidden == 1, icons = listOf(it.icon, it.icongray), description = it.description) }
     }
 
     override fun userAchievements(appId: String, userId: String): Collection<AchievementStatus> {
@@ -101,79 +105,3 @@ class SteamSource(private val apiKey: String): Source {
     }
 }
 
-private data class GetOwnedGamesResponse(
-        val response: GetOwnedGamesResponseData
-) {
-    data class GetOwnedGamesResponseData(
-            val game_count: Int,
-            val games: List<SteamGame>
-    ) {
-        data class SteamGame(
-                val appid: Int,
-                val name: String,
-                val img_icon_url: String,
-                val img_logo_url: String,
-                val has_community_visible_stats: Boolean?,
-                val playtime_forever: Int,
-                val playtime_windows_forever: Int,
-                val playtime_mac_forever: Int,
-                val playtime_linux_forever: Int
-        )
-    }
-}
-
-private data class GetSchemaForGameResponse(
-        val game: GetSchemaForGameResponseContent
-) {
-    data class GetSchemaForGameResponseContent(
-            val gameName: String,
-            val gameVersion: String,
-            val availableGameStats: GetSchemaForGameResponseStats
-    ) {
-        data class GetSchemaForGameResponseStats(
-                val achievements: List<SteamAchievement>,
-                val stats: List<SteamStat>
-        ) {
-            data class SteamAchievement(
-                    val name: String,
-                    val defaultvalue: Int,
-                    val displayName: String,
-                    val hidden: Int,
-                    val description: String?,
-                    val icon: String,
-                    val icongray: String
-            )
-
-            data class SteamStat(
-                    val name: String,
-                    val defaultvalue: Int,
-                    val displayName: String
-            )
-        }
-    }
-}
-
-private data class GetPlayerAchievementsResponse(
-        val playerstats: PlayerStats
-) {
-    data class PlayerStats(
-            val steamID: Long,
-            val gameName: String,
-            val achievements: List<Achievement>
-    ) {
-        data class Achievement(
-                val apiname: String,
-                val achieved: Int,
-                val unlocktime: Long
-        )
-    }
-}
-
-private data class ResolveVanityURLResponse(
-        val response: ResolveVanityURLResponseData
-) {
-    data class ResolveVanityURLResponseData(
-        val success: Int,
-        val steamid: String?
-    )
-}

@@ -9,7 +9,7 @@ data class Game(
         val displayImage: String?,
         val icon: String?
 ) {
-    enum class Platform { Steam, Xbox, Gog }
+    enum class Platform { Steam, Xbox }
 }
 
 data class Achievement(
