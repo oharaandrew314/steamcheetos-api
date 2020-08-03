@@ -29,7 +29,7 @@ class SteamOpenID {
     /**
      * Verify OpenID Authentication response and return steamId64
      */
-    fun verifyResponse(receivingUrl: String, responseMap: Map<String, String>): String? {
+    fun verifyResponse(receivingUrl: String, responseMap: Map<String, String>): Long? {
         val responseList = ParameterList(responseMap)
 
         val verification = manager.verify(receivingUrl, responseList, discovered)
@@ -39,6 +39,6 @@ class SteamOpenID {
         val matcher = STEAM_REGEX.matcher(id)
         if (!matcher.find()) return null
 
-        return matcher.group(1)
+        return matcher.group(1).toLong()
     }
 }

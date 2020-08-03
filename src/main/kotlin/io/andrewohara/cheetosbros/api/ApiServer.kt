@@ -1,6 +1,7 @@
 package io.andrewohara.cheetosbros.api
 
 import io.andrewohara.cheetosbros.api.auth.steam.SteamAuthController
+import io.andrewohara.cheetosbros.api.users.InMemoryUsersManager
 import io.javalin.Javalin
 
 class ApiServer {
@@ -9,7 +10,7 @@ class ApiServer {
         @JvmStatic
         fun main(args: Array<String>) {
             val app = Javalin.create()
-            SteamAuthController().register(app)
+            SteamAuthController(InMemoryUsersManager()).register(app)
 
             app.start(8000)
         }

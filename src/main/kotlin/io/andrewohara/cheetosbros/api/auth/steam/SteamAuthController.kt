@@ -1,29 +1,42 @@
 package io.andrewohara.cheetosbros.api.auth.steam
 
+import io.andrewohara.cheetosbros.api.users.UsersManager
 import io.javalin.Javalin
 import io.javalin.http.Context
 import io.javalin.http.UnauthorizedResponse
-import org.eclipse.jetty.http.HttpStatus
+import org.apache.http.client.utils.URIBuilder
 
-class SteamAuthController {
+class SteamAuthController(private val users: UsersManager) {
 
     private val steamOpenId = SteamOpenID()
 
-    fun register(app: Javalin) {
-        app.get("/auth/steam/login", ::login)
+    private val frontendRedirectUrl = "http://localhost:3000/auth/steam/callback"
 
-        app.get("/auth/steam/callback", ::callback)
+    fun register(app: Javalin) {
+        app.get("/v1/auth/steam/login", ::login)
+
+        app.get("/v1/auth/steam/callback", ::callback)
     }
 
     private fun login(ctx: Context) {
-        val url = steamOpenId.getLoginUrl("${ctx.scheme()}://${ctx.host()}/auth/steam/callback")
-        ctx.redirect(url, HttpStatus.MOVED_PERMANENTLY_301)
+        val steamRedirectUrl = URIBuilder().apply {
+            scheme = ctx.scheme()
+            host = ctx.host()
+            path = "/v1/auth/steam/callback"
+        }.build().toString()
+
+        val loginUrl = steamOpenId.getLoginUrl(steamRedirectUrl)
+        ctx.redirect(loginUrl)
     }
 
     private fun callback(ctx: Context) {
-        val steamId64 = steamOpenId.verifyResponse(ctx.url(), ctx.queryParamMap().mapValues { it.value.first() })
+        val params = ctx.queryParamMap().filterKeys { it.startsWith("openid") }.mapValues { it.value.first() }
+        val steamId64 = steamOpenId.verifyResponse(ctx.url(), params)
                 ?: throw UnauthorizedResponse()
 
-        ctx.result("You are steam user $steamId64")
+        val user = users.getUserBySteamId64(steamId64) ?: users.createUser(steamId64)
+        val token = users.assignToken(user.id)
+
+        ctx.redirect("$frontendRedirectUrl?token=$token")
     }
 }
