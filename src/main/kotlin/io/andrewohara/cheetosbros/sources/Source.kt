@@ -2,6 +2,12 @@ package io.andrewohara.cheetosbros.sources
 
 import java.time.Instant
 
+data class Player(
+        val id: String,
+        val displayName: String,
+        val avatar: String?
+)
+
 data class Game(
         val id: String,
         val platform: Platform,

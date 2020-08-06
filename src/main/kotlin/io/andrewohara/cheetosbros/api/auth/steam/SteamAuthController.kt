@@ -10,7 +10,7 @@ class SteamAuthController(private val users: UsersManager) {
 
     private val steamOpenId = SteamOpenID()
 
-    private val frontendRedirectUrl = "http://localhost:3000/auth/steam/callback"
+    private val frontendRedirectUrl = "http://localhost:3000/auth/callback"
 
     fun register(app: Javalin) {
         app.get("/v1/auth/steam/login", ::login)
@@ -37,6 +37,6 @@ class SteamAuthController(private val users: UsersManager) {
         val user = users.getUserBySteamId64(steamId64) ?: users.createUser(steamId64)
         val token = users.assignToken(user.id)
 
-        ctx.redirect("$frontendRedirectUrl?token=$token")
+        ctx.redirect("$frontendRedirectUrl?token=$token&displayName=${user.displayName}")
     }
 }

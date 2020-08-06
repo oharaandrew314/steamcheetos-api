@@ -13,11 +13,12 @@ import java.net.URI
 import java.net.URLEncoder
 import java.util.*
 
+// TODO implement logout https://docs.microsoft.com/en-us/azure/active-directory/develop/scenario-web-app-sign-user-sign-in?tabs=java#sign-out-button
 
 class XboxOpenIdConnect(clientId: String, clientSecret: String){
     companion object {
         private const val authority = "https://login.microsoftonline.com/common/"
-        private val scopes = setOf("openid", "profile")
+        private val scopes = setOf("xboxlive.signin", "profile")
         private fun AuthenticationResponse.isSuccess() = this is AuthenticationSuccessResponse
         private fun IAuthenticationResult.getNonce(): String? = JWTParser.parse(idToken()).jwtClaimsSet.getClaim("nonce") as? String
     }

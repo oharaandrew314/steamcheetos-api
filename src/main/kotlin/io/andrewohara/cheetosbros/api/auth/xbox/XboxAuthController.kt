@@ -10,7 +10,7 @@ import java.net.URI
 class XboxAuthController(clientId: String, clientSecret: String, private val users: UsersManager) {
 
     private val authHelper = XboxOpenIdConnect(clientId, clientSecret)
-    private val frontendRedirectUrl = "http://localhost:3000/auth/steam/callback"
+    private val frontendRedirectUrl = "http://localhost:3000/auth/callback"
 
     fun register(app: Javalin) {
         app.get("/v1/auth/xbox/login", ::login)
@@ -29,15 +29,14 @@ class XboxAuthController(clientId: String, clientSecret: String, private val use
     }
 
     private fun callback(ctx: Context) {
-        println("callback")
-        println(ctx.queryParamMap())
-
         val authentication = authHelper.authorizeCallback(ctx.queryParamMap(), URI(ctx.url()), URI(ctx.fullUrl())) ?: throw UnauthorizedResponse()
         val username = authentication.account().username()
+        println(authentication.accessToken())
+        println(authentication.idToken())
 
-        val user = users.getUserByXboxUsername(username) ?: users.createUser(xboxUsername = username)
+        val user = users.getUserByXboxUsername(username) ?: users.createUser(xboxUsername = username, xboxToken = authentication.accessToken())
         val token = users.assignToken(user.id)
 
-        ctx.redirect("$frontendRedirectUrl?token=$token")
+        ctx.redirect("$frontendRedirectUrl?token=$token&displayName=${user.displayName}")
     }
 }

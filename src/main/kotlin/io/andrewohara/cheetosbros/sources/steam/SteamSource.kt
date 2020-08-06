@@ -2,10 +2,7 @@ package io.andrewohara.cheetosbros.sources.steam
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.andrewohara.cheetosbros.sources.Achievement
-import io.andrewohara.cheetosbros.sources.AchievementStatus
-import io.andrewohara.cheetosbros.sources.Game
-import io.andrewohara.cheetosbros.sources.Source
+import io.andrewohara.cheetosbros.sources.*
 import java.lang.IllegalStateException
 import java.net.URI
 import java.net.http.HttpClient
@@ -91,6 +88,32 @@ class SteamSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), ResolveVanityURLResponse::class.java)
                 .response
                 .let { if (it.success == 1) it.steamid!! else null }
+    }
+
+    fun getPlayer(id: String): Player? {
+        val request = HttpRequest.newBuilder()
+                .uri("ISteamUser","GetPlayerSummaries", 2, params = mapOf("steamids" to id))
+                .GET()
+                .build()
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() != 200) {
+            throw IllegalStateException("Request failed: $response")
+        }
+
+        val responseBody =  mapper.readValue(response.body(), GetPlayerSummariesResponse::class.java)
+
+        return responseBody
+                .response
+                .players
+                .firstOrNull { it.steamid == id }
+                ?.let {
+                    Player(
+                            id = it.steamid,
+                            displayName = it.personaname,
+                            avatar = it.avatarfull
+                    )
+                }
     }
 
     private fun HttpRequest.Builder.uri(service: String, method: String, version: Int, steamId: Long? = null, params: Map<String, String> = emptyMap()): HttpRequest.Builder {

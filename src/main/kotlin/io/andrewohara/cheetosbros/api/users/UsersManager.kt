@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.users
 
-import java.lang.IllegalArgumentException
+import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import java.util.*
 
 typealias UserId = String
@@ -10,7 +10,8 @@ typealias XboxUsername = String
 
 interface UsersManager {
 
-    fun createUser(steamId64: SteamId64? = null, xboxUsername: XboxUsername? = null): User
+    fun createUser(steamId64: SteamId64): User
+    fun createUser(xboxUsername: XboxUsername, xboxToken: String): User
     fun assignToken(userId: UserId): Token
 
     fun getUserByXboxUsername(username: XboxUsername): User?
@@ -18,18 +19,34 @@ interface UsersManager {
     fun getUserByToken(token: Token): User?
 }
 
-class InMemoryUsersManager: UsersManager {
+class InMemoryUsersManager(private val steamSource: SteamSource): UsersManager {
 
     private val users = mutableSetOf<User>()
     private val tokens = mutableMapOf<Token, UserId>()
 
-    override fun createUser(steamId64: Long?, xboxUsername: XboxUsername?): User {
-        if (steamId64 == null && xboxUsername == null) throw IllegalArgumentException("steam and xbox cannot have null identities")
+    override fun createUser(xboxUsername: XboxUsername, xboxToken: String): User {
 
         val user = User(
                 id = UUID.randomUUID().toString(),
+                displayName = xboxUsername,
+                steamId64 = null,
+                xboxUsername = xboxUsername,
+                xboxToken = xboxToken
+        )
+        users.add(user)
+        return user
+    }
+
+    override fun createUser(steamId64: SteamId64): User {
+        val player = steamSource.getPlayer(steamId64.toString())
+        val username = player?.displayName ?: "steam$steamId64"
+
+        val user = User(
+                id = UUID.randomUUID().toString(),
+                displayName = username,
                 steamId64 = steamId64,
-                xboxUsername = xboxUsername
+                xboxUsername = null,
+                xboxToken = null
         )
         users.add(user)
         return user
