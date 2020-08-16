@@ -6,15 +6,15 @@ import java.util.*
 typealias UserId = String
 typealias Token = String
 typealias SteamId64 = Long
-typealias XboxUsername = String
 
 interface UsersManager {
 
     fun createUser(steamId64: SteamId64): User
-    fun createUser(xboxUsername: XboxUsername, xboxToken: String): User
+    fun createUser(xuid: String, gamertag: String, openXblToken: String): User
+
     fun assignToken(userId: UserId): Token
 
-    fun getUserByXboxUsername(username: XboxUsername): User?
+    fun getUserByXuid(xuid: String): User?
     fun getUserBySteamId64(steamId64: SteamId64): User?
     fun getUserByToken(token: Token): User?
 }
@@ -24,15 +24,18 @@ class InMemoryUsersManager(private val steamSource: SteamSource): UsersManager {
     private val users = mutableSetOf<User>()
     private val tokens = mutableMapOf<Token, UserId>()
 
-    override fun createUser(xboxUsername: XboxUsername, xboxToken: String): User {
-
+    override fun createUser(xuid: String, gamertag: String, openXblToken: String): User {
         val user = User(
                 id = UUID.randomUUID().toString(),
-                displayName = xboxUsername,
-                steamId64 = null,
-                xboxUsername = xboxUsername,
-                xboxToken = xboxToken
+                displayName = gamertag,
+                steam = null,
+                xbox = XboxUser(
+                        xuid = xuid,
+                        gamertag = gamertag,
+                        token = openXblToken
+                )
         )
+
         users.add(user)
         return user
     }
@@ -44,20 +47,26 @@ class InMemoryUsersManager(private val steamSource: SteamSource): UsersManager {
         val user = User(
                 id = UUID.randomUUID().toString(),
                 displayName = username,
-                steamId64 = steamId64,
-                xboxUsername = null,
-                xboxToken = null
+                steam = SteamUser(
+                        steamId64 = steamId64,
+                        username = username
+                ),
+                xbox = null
         )
         users.add(user)
         return user
     }
 
     override fun getUserBySteamId64(steamId64: Long): User? {
-        return users.firstOrNull { it.steamId64 == steamId64 }
+        return users.firstOrNull { it.steam?.steamId64 == steamId64 }
     }
 
-    override fun getUserByXboxUsername(username: XboxUsername): User? {
-        return users.firstOrNull { it.xboxUsername == username }
+//    fun getUserByXboxGamertag(username: XboxUsername): User? {
+//        return users.firstOrNull { it.xbox?.gamertag == username }
+//    }
+
+    override fun getUserByXuid(xuid: String): User? {
+        return users.firstOrNull { it.xbox?.xuid == xuid }
     }
 
     override fun getUserByToken(token: String): User? {

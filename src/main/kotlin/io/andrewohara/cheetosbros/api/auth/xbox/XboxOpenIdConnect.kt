@@ -44,6 +44,10 @@ class XboxOpenIdConnect(clientId: String, clientSecret: String){
         val result = getAuthResultByAuthCode(oidcResponse.authorizationCode, currentUri)
         if (result.getNonce().isNullOrBlank()) return null
 
+        println(result.scopes())
+
+        println(JWTParser.parse(result.idToken()).jwtClaimsSet)
+
         return result
     }
 
@@ -60,7 +64,7 @@ class XboxOpenIdConnect(clientId: String, clientSecret: String){
                 .prompt(Prompt.SELECT_ACCOUNT)
                 .state(state)
                 .nonce(nonce)
-//                .claimsChallenge(claims)
+//                .claimsChallenge("user")
                 .build()
 
         return publicApplication.getAuthorizationRequestUrl(parameters).toString()

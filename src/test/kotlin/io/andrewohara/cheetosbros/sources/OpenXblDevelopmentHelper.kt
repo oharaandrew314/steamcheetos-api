@@ -37,4 +37,9 @@ class OpenXblDevelopmentHelper {
             println(achievement)
         }
     }
+
+    @Test
+    fun `lookup by email`() {
+        println(source.resolveUserId("ohara.andrew314@live.com"))
+    }
 }
