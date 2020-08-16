@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.auth.steam
 
-import io.andrewohara.cheetosbros.api.ApiServer
+import io.andrewohara.cheetosbros.api.auth.CheetosRole
 import io.andrewohara.cheetosbros.api.users.UsersManager
 import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil.roles
@@ -15,9 +15,9 @@ class SteamAuthController(private val users: UsersManager) {
     private val frontendRedirectUrl = "http://localhost:3000/auth/callback"
 
     fun register(app: Javalin) {
-        app.get("/v1/auth/steam/login", ::login, roles(ApiServer.ApiRole.Public))
+        app.get("/v1/auth/steam/login", ::login, roles(CheetosRole.Public))
 
-        app.get("/v1/auth/steam/callback", ::callback, roles(ApiServer.ApiRole.Public))
+        app.get("/v1/auth/steam/callback", ::callback, roles(CheetosRole.Public))
     }
 
     private fun login(ctx: Context) {
@@ -39,6 +39,6 @@ class SteamAuthController(private val users: UsersManager) {
         val user = users.getUserBySteamId64(steamId64) ?: users.createUser(steamId64)
         val token = users.assignToken(user.id)
 
-        ctx.redirect("$frontendRedirectUrl?token=$token&displayName=${user.displayName}")
+        ctx.redirect("$frontendRedirectUrl?token=$token")
     }
 }
