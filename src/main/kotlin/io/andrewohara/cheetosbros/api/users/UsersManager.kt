@@ -1,5 +1,6 @@
 package io.andrewohara.cheetosbros.api.users
 
+import io.andrewohara.cheetosbros.api.auth.openxbl.OpenXblAuthResult
 import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import java.util.*
 
@@ -9,10 +10,12 @@ typealias SteamId64 = Long
 
 interface UsersManager {
 
-    fun createUser(steamId64: SteamId64): User
-    fun createUser(xuid: String, gamertag: String, openXblToken: String): User
+    fun createUser(): User
 
-    fun assignToken(userId: UserId): Token
+    fun linkSocialLogin(userId: UserId, steamId64: SteamId64): User
+    fun linkSocialLogin(userId: UserId, data: OpenXblAuthResult): User
+
+    fun linkSession(userId: UserId, sessionId: String)
 
     fun getUserByXuid(xuid: String): User?
     fun getUserBySteamId64(steamId64: SteamId64): User?
@@ -24,46 +27,43 @@ class InMemoryUsersManager(private val steamSource: SteamSource): UsersManager {
     private val users = mutableSetOf<User>()
     private val tokens = mutableMapOf<Token, UserId>()
 
-    override fun createUser(xuid: String, gamertag: String, openXblToken: String): User {
-        val user = User(
-                id = UUID.randomUUID().toString(),
-                displayName = gamertag,
-                steam = null,
-                xbox = XboxUser(
-                        xuid = xuid,
-                        gamertag = gamertag,
-                        token = openXblToken
-                )
-        )
+    override fun createUser(): User {
+        val id = UUID.randomUUID().toString()
 
+        val user = User(id = id)
         users.add(user)
         return user
     }
 
-    override fun createUser(steamId64: SteamId64): User {
-        val player = steamSource.getPlayer(steamId64.toString())
-        val username = player?.displayName ?: "steam$steamId64"
-
-        val user = User(
-                id = UUID.randomUUID().toString(),
-                displayName = username,
-                steam = SteamUser(
-                        steamId64 = steamId64,
-                        username = username
-                ),
-                xbox = null
+    override fun linkSocialLogin(userId: UserId, data: OpenXblAuthResult): User {
+        val user = users.first { it.id == userId }
+        user.xbox = XboxUser(
+                xuid = data.xuid,
+                gamertag = data.gamertag,
+                token = data.app_key
         )
-        users.add(user)
+        user.displayName = user.displayName ?: data.gamertag
+
+        return user
+    }
+
+    override fun linkSocialLogin(userId: UserId, steamId64: SteamId64): User {
+        val steamPlayer = steamSource.getPlayer(steamId64.toString())
+        val username = steamPlayer?.displayName ?: "steam$steamId64"
+
+        val user = users.first { it.id == userId }
+        user.steam = SteamUser(
+                steamId64 = steamId64,
+                username = username
+        )
+        user.displayName = user.displayName ?: username
+
         return user
     }
 
     override fun getUserBySteamId64(steamId64: Long): User? {
         return users.firstOrNull { it.steam?.steamId64 == steamId64 }
     }
-
-//    fun getUserByXboxGamertag(username: XboxUsername): User? {
-//        return users.firstOrNull { it.xbox?.gamertag == username }
-//    }
 
     override fun getUserByXuid(xuid: String): User? {
         return users.firstOrNull { it.xbox?.xuid == xuid }
@@ -74,9 +74,7 @@ class InMemoryUsersManager(private val steamSource: SteamSource): UsersManager {
         return users.firstOrNull { it.id == userId }
     }
 
-    override fun assignToken(userId: UserId): Token {
-        val token = UUID.randomUUID().toString()
-        tokens[token] = userId
-        return token
+    override fun linkSession(userId: UserId, sessionId: String) {
+        tokens[sessionId] = userId
     }
 }

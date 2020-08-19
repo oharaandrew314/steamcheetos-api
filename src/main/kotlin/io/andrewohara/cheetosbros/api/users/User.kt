@@ -2,9 +2,9 @@ package io.andrewohara.cheetosbros.api.users
 
 data class User(
         val id: String,
-        val displayName: String,
-        val xbox: XboxUser?,
-        val steam: SteamUser?
+        var displayName: String? = null,
+        var xbox: XboxUser? = null,
+        var steam: SteamUser? = null
 )
 
 data class XboxUser(

@@ -9,12 +9,12 @@ class GamesHandler(private val steamSource: Source, private val xboxSource: Sour
     fun listGames(user: User): Collection<Game> {
         val games = mutableSetOf<Game>()
 
-        if (user.xbox != null) {
-            games.addAll(xboxSource.games(user.xbox.xuid))
+        user.xbox?.let { xbox ->
+            games.addAll(xboxSource.games(xbox.xuid))
         }
 
-        if (user.steam != null) {
-            games.addAll(steamSource.games(user.steam.steamId64.toString()))
+        user.steam?.let { steam ->
+            games.addAll(steamSource.games(steam.steamId64.toString()))
         }
 
         return games

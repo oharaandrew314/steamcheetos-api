@@ -17,7 +17,7 @@ class UsersControllerV1 {
 
         val response = UserResponseV1(
                 id = user.id,
-                displayName = user.displayName,
+                displayName = user.displayName ?: "user-${user.id}",
                 steamUsername = user.steam?.username,
                 xboxGamerTag = user.xbox?.gamertag
         )

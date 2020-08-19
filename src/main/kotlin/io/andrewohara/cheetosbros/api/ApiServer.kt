@@ -25,14 +25,17 @@ class ApiServer {
             val users = InMemoryUsersManager(steamSource)
 
             val gamesHandler = GamesHandler(xboxSource = xboxSource, steamSource = steamSource)
+            val authorizationHandler = CheetosAuthorizationHandler(users)
 
             val app = Javalin.create {
-                it.accessManager(CheetosAuthorizationHandler(users))
+                it.accessManager(authorizationHandler)
                 it.enableCorsForAllOrigins()
             }
 
-            SteamAuthController(users).register(app)
-            OpenXblAuthController(openXblPublicAppKey, users).register(app)
+            app.get("/health") { it.result("ok") }
+
+            SteamAuthController(users, authorizationHandler).register(app)
+            OpenXblAuthController(openXblPublicAppKey, users, authorizationHandler).register(app)
             GamesControllerV1(gamesHandler).register(app)
             UsersControllerV1().register(app)
 
