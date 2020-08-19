@@ -19,9 +19,8 @@ class SteamAuthController(private val users: UsersManager, private val cheetosAu
     private val frontendRedirectUrl = "http://localhost:3000/auth/callback"
 
     fun register(app: Javalin) {
-        app.get("/v1/auth/steam/login", ::login, roles(CheetosRole.Public))
-
-        app.get("/v1/auth/steam/callback", ::callback, roles(CheetosRole.Public))
+        app.get("/v1/auth/steam/login", ::login, roles(CheetosRole.Public, CheetosRole.User))
+        app.get("/v1/auth/steam/callback", ::callback, roles(CheetosRole.Public, CheetosRole.User))
     }
 
     private fun login(ctx: Context) {
