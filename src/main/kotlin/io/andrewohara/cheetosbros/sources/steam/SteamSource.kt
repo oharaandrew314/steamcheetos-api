@@ -53,8 +53,9 @@ class SteamSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), GetSchemaForGameResponse::class.java)
                 .game
                 .availableGameStats
-                .achievements
-                .map { Achievement(id = it.name, name = it.displayName, hidden = it.hidden == 1, icons = listOf(it.icon, it.icongray), description = it.description) }
+                ?.achievements
+                ?.map { Achievement(gameId = appId, id = it.name, name = it.displayName, hidden = it.hidden == 1, icons = listOf(it.icon, it.icongray), description = it.description) }
+                ?: emptySet()
     }
 
     override fun userAchievements(appId: String, userId: String): Collection<AchievementStatus> {
@@ -65,13 +66,15 @@ class SteamSource(private val apiKey: String): Source {
 
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
         if (response.statusCode() != 200) {
+            if (response.body().contains("Requested app has no stats")) return emptyList()
             throw IllegalStateException("Request failed: $response")
         }
 
         return mapper.readValue(response.body(), GetPlayerAchievementsResponse::class.java)
                 .playerstats
                 .achievements
-                .map { AchievementStatus(id = it.apiname, unlocked = it.achieved == 1, unlockedOn = if (it.unlocktime > 0) Instant.ofEpochSecond(it.unlocktime) else null) }
+                ?.map { AchievementStatus(id = it.apiname, unlockedOn = if (it.unlocktime > 0) Instant.ofEpochSecond(it.unlocktime) else null) }
+                ?: emptyList()
     }
 
     override fun resolveUserId(username: String): String? {
@@ -110,6 +113,7 @@ class SteamSource(private val apiKey: String): Source {
                 ?.let {
                     Player(
                             id = it.steamid,
+                            platform = Game.Platform.Steam,
                             displayName = it.personaname,
                             avatar = it.avatarfull
                     )

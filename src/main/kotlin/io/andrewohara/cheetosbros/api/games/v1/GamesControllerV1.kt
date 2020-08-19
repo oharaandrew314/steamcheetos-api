@@ -16,7 +16,7 @@ class GamesControllerV1(private val gamesHandler: GamesHandler) {
     private fun sync(ctx: Context) {
         val user = ctx.attribute<User>("user")!!
 
-        gamesHandler.sync(user)
+        gamesHandler.syncPlatform(user)
     }
 
     private fun listGames(ctx: Context) {

@@ -6,7 +6,7 @@ data class GetPlayerAchievementsResponse(
     data class PlayerStats(
             val steamID: Long,
             val gameName: String,
-            val achievements: List<Achievement>
+            val achievements: List<Achievement>?
     ) {
         data class Achievement(
                 val apiname: String,

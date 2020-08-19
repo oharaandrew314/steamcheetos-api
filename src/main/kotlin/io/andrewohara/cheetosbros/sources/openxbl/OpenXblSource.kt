@@ -82,6 +82,7 @@ class OpenXblSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), ListAchievementsResponse::class.java)
                 .achievements
                 .map { Achievement(
+                        gameId = appId,
                         id = it.id, name = it.name, description = it.lockedDescription, hidden = it.isSecret,
                         icons = it.mediaAssets.filter { asset -> asset.type == "Icon" }.map { asset -> asset.url }
                 ) }
@@ -104,7 +105,6 @@ class OpenXblSource(private val apiKey: String): Source {
                 .achievements
                 .map { AchievementStatus(
                         id = it.id,
-                        unlocked = it.progressState == "Achieved",
                         unlockedOn = if (it.progressState == "Achieved") it.progression.timeUnlocked else null
                 ) }
     }

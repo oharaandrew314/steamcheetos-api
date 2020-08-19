@@ -17,7 +17,8 @@ ext {
     ver = [
             slf4j: '1.7.30',
             javalin: '3.9.1',
-            jackson: '2.11.1'
+            jackson: '2.11.1',
+            aws: '1.11.845'
     ]
 }
 
@@ -32,6 +33,7 @@ dependencies {
     implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr353', version: ver.jackson
     implementation group: 'org.openid4java', name: 'openid4java', version: '1.0.0'
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
+    implementation "com.amazonaws:aws-java-sdk-dynamodb:${ver.aws}"
 
     // Logging
     implementation group: 'log4j', name: 'log4j', version: '1.2.17'
