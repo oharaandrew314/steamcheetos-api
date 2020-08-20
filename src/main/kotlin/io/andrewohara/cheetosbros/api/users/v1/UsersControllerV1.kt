@@ -19,7 +19,7 @@ class UsersControllerV1 {
                 id = user.id,
                 displayName = user.displayName ?: "user-${user.id}",
                 steamUsername = user.steam?.username,
-                xboxGamerTag = user.xbox?.gamertag
+                xboxGamerTag = user.xbox?.username
         )
 
         ctx.json(response)

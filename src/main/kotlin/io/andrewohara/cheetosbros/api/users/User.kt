@@ -4,23 +4,19 @@ import io.andrewohara.cheetosbros.sources.Game
 
 data class User(
         val id: String,
-        var displayName: String? = null,
-        var xbox: XboxUser? = null,
-        var steam: SteamUser? = null
+        val displayName: String? = null,
+        val xbox: SocialLink? = null,
+        val steam: SocialLink? = null
 ) {
-    fun userIdForPlatform(platform: Game.Platform) = when(platform) {
-        Game.Platform.Xbox -> xbox?.xuid
-        Game.Platform.Steam -> steam?.steamId64?.toString()
+    fun socialLinkForPlatform(platform: Game.Platform) = when(platform) {
+        Game.Platform.Xbox -> xbox
+        Game.Platform.Steam -> steam
     }
 }
 
-data class XboxUser(
-        val xuid: String,
-        val gamertag: String,
-        val token: String
-)
-
-data class SteamUser(
-        val steamId64: Long,
-        val username: String
+data class SocialLink(
+        val id: String,
+        val username: String,
+        val platform: Game.Platform,
+        val token: String?
 )

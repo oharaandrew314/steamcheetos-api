@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.auth.openxbl
 
-import io.andrewohara.cheetosbros.api.auth.CheetosAuthorizationHandler
+import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.CheetosRole
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.api.users.UsersManager
@@ -10,7 +10,7 @@ import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
 import java.lang.IllegalStateException
 
-class OpenXblAuthController(publicAppKey: String, private val users: UsersManager, private val cheetosAuth: CheetosAuthorizationHandler) {
+class OpenXblAuthController(publicAppKey: String, private val authManager: AuthManager) {
 
     private val openXblAuth = OpenXblAuth(publicAppKey)
 
@@ -28,29 +28,9 @@ class OpenXblAuthController(publicAppKey: String, private val users: UsersManage
 
     private fun callback(ctx: Context) {
         val code = ctx.queryParam<String>("code").get()
-        val result = openXblAuth.verify(code)
+        val socialLink = openXblAuth.verify(code)
 
-        val loggedInUser = ctx.attribute<User>("user")
-        val linkedUser = users.getUserByXuid(result.xuid)
-
-        when {
-            linkedUser == null && loggedInUser == null -> {
-                val newUser = users.createUser()
-                users.linkSocialLogin(newUser.id, result)
-
-                users.linkSession(newUser.id, cheetosAuth.createSession(ctx))
-            }
-            linkedUser == null && loggedInUser != null -> {
-                users.linkSocialLogin(loggedInUser.id, result)
-            }
-            linkedUser != null && loggedInUser == null -> {
-                users.linkSession(linkedUser.id, cheetosAuth.createSession(ctx))
-            }
-            linkedUser != null && loggedInUser != null -> {
-                if (linkedUser.id != loggedInUser.id) throw BadRequestResponse("User is already linked to another account")
-            }
-            else -> throw IllegalStateException()
-        }
+        authManager.login(ctx, socialLink)
 
         ctx.redirect(frontendRedirectUrl)
     }

@@ -34,14 +34,14 @@ class GamesHandler(
     }
 
     private fun syncPlatform(user: User, platform: Game.Platform) {
-        val platformUserId = user.userIdForPlatform(platform) ?: return
+        val socialLink = user.socialLinkForPlatform(platform) ?: return
 
         val source = when(platform) {
             Game.Platform.Steam -> steamSource
-            Game.Platform.Xbox -> OpenXblSource(user.xbox!!.token)
+            Game.Platform.Xbox -> OpenXblSource(socialLink.token!!)
         }
 
-        val ownedGames = source.games(platformUserId)
+        val ownedGames = source.games(socialLink.id)
         val existingGameIds = gamesDao[ownedGames.map { it.uuid }].map { it.game.uuid }
         for (game in ownedGames.filter { it.uuid !in existingGameIds }) {
             try {
@@ -56,7 +56,7 @@ class GamesHandler(
         }
 
         for (game in ownedGames) {
-            val achievementStatuses = source.userAchievements(game.id, platformUserId)
+            val achievementStatuses = source.userAchievements(game.id, socialLink.id)
             val gameStatus = GameStatus(gameUuid = game.uuid, achievements = achievementStatuses)
             gameStatusDao.save(user, gameStatus)
             println("Updated ${achievementStatuses.size} user achievements for ${game.name}")

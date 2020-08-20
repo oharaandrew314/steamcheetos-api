@@ -2,6 +2,8 @@ package io.andrewohara.cheetosbros.api.auth.openxbl
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.andrewohara.cheetosbros.api.users.SocialLink
+import io.andrewohara.cheetosbros.sources.Game
 import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
@@ -15,7 +17,7 @@ class OpenXblAuth(private val publicAppKey: String) {
 
     fun getLoginUrl() = "https://xbl.io/app/auth/$publicAppKey"
 
-    fun verify(code: String): OpenXblAuthResult {
+    fun verify(code: String): SocialLink {
         val payload = """{"code": "$code", "app_key": "$publicAppKey"}"""
 
         val request = HttpRequest
@@ -31,7 +33,14 @@ class OpenXblAuth(private val publicAppKey: String) {
             throw IOException("Error authorizing request: ${response.body()}")
         }
 
-        return mapper.readValue(response.body(), OpenXblAuthResult::class.java)
+        val result = mapper.readValue(response.body(), OpenXblAuthResult::class.java)
+
+        return SocialLink(
+                platform = Game.Platform.Xbox,
+                id = result.xuid,
+                username = result.gamertag,
+                token = result.app_key
+        )
     }
 }
 
