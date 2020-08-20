@@ -10,21 +10,17 @@ class UsersDao(tableName: String, client: AmazonDynamoDB? = null) {
 
     private val mapper = DynamoUtils.mapper<DynamoUser, String, Void>(tableName, client)
 
-    fun createTableIfNotExists() {
-        mapper.createTableIfNotExists(ProvisionedThroughput(1, 1))
-    }
-
     operator fun get(cheetosUserId: String): User? {
         return mapper.load(cheetosUserId)?.toItem()
     }
 
     operator fun get(platform: Game.Platform, socialUserId: String): User? {
         val query = when (platform) {
-            Game.Platform.Steam -> DynamoDBQueryExpression<DynamoUser>()
+            Game.Platform.Xbox -> DynamoDBQueryExpression<DynamoUser>()
                     .withIndexName("xuid")
                     .withHashKeyValues(DynamoUser(xboxXuid = socialUserId))
                     .withConsistentRead(false)
-            Game.Platform.Xbox -> DynamoDBQueryExpression<DynamoUser>()
+            Game.Platform.Steam -> DynamoDBQueryExpression<DynamoUser>()
                     .withIndexName("steamId64")
                     .withHashKeyValues(DynamoUser(steamId64 = socialUserId))
                     .withConsistentRead(false)
@@ -55,7 +51,7 @@ class UsersDao(tableName: String, client: AmazonDynamoDB? = null) {
     ) {
         fun toItem() = User(
                 id = id!!,
-                displayName = displayName,
+                displayName = displayName!!,
                 xbox = xboxXuid?.let {
                     SocialLink(
                             id = xboxXuid!!,

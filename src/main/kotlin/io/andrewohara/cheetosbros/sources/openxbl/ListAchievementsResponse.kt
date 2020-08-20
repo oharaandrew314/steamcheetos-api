@@ -36,7 +36,7 @@ data class ListAchievementsResponse(
     )
 
     data class Requirements(
-            val current: String,
+            val current: String?,
             val target: String,
             val operationType: String,  // known values are "Maximum",
             val valueType: String // known values are "Integer"

@@ -25,7 +25,7 @@ class GamesHandler(
         thread(start = true) {
             println("Syncing games for ${user.displayName}")
             try {
-                syncPlatform(user, Game.Platform.Steam)
+//                syncPlatform(user, Game.Platform.Steam)
                 syncPlatform(user, Game.Platform.Xbox)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -42,8 +42,10 @@ class GamesHandler(
         }
 
         val ownedGames = source.games(socialLink.id)
-        val existingGameIds = gamesDao[ownedGames.map { it.uuid }].map { it.game.uuid }
-        for (game in ownedGames.filter { it.uuid !in existingGameIds }) {
+        println("Found ${ownedGames.size} games for $platform")
+        for (game in ownedGames) {
+            if (gamesDao[game.uuid] != null) continue
+
             try {
                 val achievements = source.achievements(game.id)
                 val details = GameDetails(game = game, achievements = achievements)
@@ -54,6 +56,7 @@ class GamesHandler(
                 e.printStackTrace()
             }
         }
+        println("Done Saving games")
 
         for (game in ownedGames) {
             val achievementStatuses = source.userAchievements(game.id, socialLink.id)

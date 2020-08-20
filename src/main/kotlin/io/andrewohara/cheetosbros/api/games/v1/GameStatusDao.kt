@@ -20,10 +20,6 @@ class GameStatusDao(tableName: String, client: AmazonDynamoDB? = null) {
                 .newTableMapper<DynamoGameStatus, String, String>(DynamoGameStatus::class.java)
     }
 
-    fun createTableIfNotExists() {
-        mapper.createTableIfNotExists(ProvisionedThroughput(1, 1))
-    }
-
     fun list(user: User): Collection<GameStatus> {
         val query = DynamoDBQueryExpression<DynamoGameStatus>()
                 .withHashKeyValues(DynamoGameStatus(userId = user.id))

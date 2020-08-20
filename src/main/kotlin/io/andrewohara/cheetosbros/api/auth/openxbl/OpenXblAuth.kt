@@ -42,13 +42,14 @@ class OpenXblAuth(private val publicAppKey: String) {
                 token = result.app_key
         )
     }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private data class OpenXblAuthResult(
+            val xuid: String,
+            val gamertag: String,
+            val avatar: String,
+            val gamerscore: String,
+            val app_key: String
+    )
 }
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class OpenXblAuthResult(
-        val xuid: String,
-        val gamertag: String,
-        val avatar: String,
-        val gamerscore: String,
-        val app_key: String
-)

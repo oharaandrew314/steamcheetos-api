@@ -1,6 +1,5 @@
 package io.andrewohara.cheetosbros.api.users
 
-import io.andrewohara.cheetosbros.sources.Game
 import java.util.*
 
 class UsersManager(private val usersDao: UsersDao) {
@@ -13,22 +12,17 @@ class UsersManager(private val usersDao: UsersDao) {
         return usersDao[socialLink.platform, socialLink.id]
     }
 
-    fun createUser(): User {
+    fun createUser(socialLink: SocialLink): User {
         val id = UUID.randomUUID().toString()
 
-        val user = User(id = id)
+        val user = User(id = id, displayName = socialLink.username).withSocialLink(socialLink)
         usersDao.save(user)
         return user
     }
 
     fun linkSocialLogin(user: User, socialLink: SocialLink): User {
-        val updated = when(socialLink.platform) {
-            Game.Platform.Xbox -> user.copy(xbox = socialLink, displayName = user.displayName ?: socialLink.username)
-            Game.Platform.Steam -> user.copy(steam = socialLink, displayName = user.displayName ?: socialLink.username)
-        }
-
+        val updated = user.withSocialLink(socialLink)
         usersDao.save(updated)
-
-        return user
+        return updated
     }
 }

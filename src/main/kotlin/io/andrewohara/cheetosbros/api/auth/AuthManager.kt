@@ -10,7 +10,6 @@ import io.javalin.http.Context
 import io.javalin.http.Handler
 import io.javalin.http.UnauthorizedResponse
 import java.lang.IllegalStateException
-import javax.servlet.http.Cookie
 
 class AuthManager(private val authorizationDao: AuthorizationDao, private val usersManager: UsersManager): AccessManager {
 
@@ -30,42 +29,43 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
     }
 
     private fun getAuthorizedUser(ctx: Context): User? {
-        val sessionId = ctx.cookie("cheetosbros-session-id") ?: return null
-        val userId = authorizationDao.resolveUserId(sessionId) ?: return null
+        val token = ctx.cookie(ID_TOKEN_NAME) ?: return null
+        val userId = authorizationDao.resolveUserId(token) ?: return null
         return usersManager[userId]
     }
 
     private fun createSession(ctx: Context, user: User) {
         val token = authorizationDao.assignToken(user)
 
-        val cookie = Cookie("cheetosbros-session-id", token).apply {
-            isHttpOnly = true
-        }
-        ctx.cookie(cookie)
+        ctx.cookie(ID_TOKEN_NAME, token)
     }
 
     fun login(ctx: Context, socialLink: SocialLink) {
-        val loggedInUser = ctx.attribute<User>("user")
+        val loggedInUser = getAuthorizedUser(ctx)
         val linkedUser = usersManager[socialLink]
 
-        when {
+        val effectiveUser = when {
             linkedUser == null && loggedInUser == null -> {
-                val newUser = usersManager.createUser()
-                usersManager.linkSocialLogin(newUser, socialLink)
-
-                createSession(ctx, newUser)
+                usersManager.createUser(socialLink)
             }
             linkedUser == null && loggedInUser != null -> {
                 usersManager.linkSocialLogin(loggedInUser, socialLink)
             }
             linkedUser != null && loggedInUser == null -> {
-                createSession(ctx, linkedUser)
+                linkedUser
             }
             linkedUser != null && loggedInUser != null -> {
                 if (linkedUser.id != loggedInUser.id) throw BadRequestResponse("User is already linked to another account")
+                loggedInUser
             }
             else -> throw IllegalStateException()
         }
+
+        createSession(ctx, effectiveUser)
+    }
+
+    companion object {
+        private const val ID_TOKEN_NAME = "cheetosbros-id-token"
     }
 }
 

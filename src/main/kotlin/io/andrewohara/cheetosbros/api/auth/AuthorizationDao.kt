@@ -36,10 +36,6 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, pub
             return null
         }
 
-        for (claim in decoded.claims) {
-            println("${claim.key}:${claim.value.asString()}")
-        }
-
         return decoded.subject
     }
 
@@ -48,8 +44,8 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, pub
             withIssuer(issuer)
             withSubject(user.id)
             withClaim("displayName", user.displayName)
-            if (user.xbox != null) withClaim("xboxId", user.xbox.id)
-            if (user.steam != null) withClaim("steamId", user.steam.id)
+            if (user.xbox != null) withClaim("xboxUsername", user.xbox.username)
+            if (user.steam != null) withClaim("steamUsername", user.steam.username)
         }
 
         return builder.sign(algorithm)

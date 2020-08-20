@@ -22,10 +22,6 @@ class GamesDao(tableName: String, client: AmazonDynamoDB? = null) {
                 .newTableMapper<DynamoGame, String, String>(DynamoGame::class.java)
     }
 
-    fun createTableIfNotExists() {
-        mapper.createTableIfNotExists(ProvisionedThroughput(1, 1))
-    }
-
     fun save(game: GameDetails) {
         val item = DynamoGame(game.game, game.achievements)
         mapper.save(item)

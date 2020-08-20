@@ -3,7 +3,10 @@ package io.andrewohara.cheetosbros.sources.openxbl
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.andrewohara.cheetosbros.sources.*
+import io.andrewohara.cheetosbros.sources.Achievement
+import io.andrewohara.cheetosbros.sources.Source
+import io.andrewohara.cheetosbros.sources.Game
+import io.andrewohara.cheetosbros.sources.AchievementStatus
 import java.lang.IllegalStateException
 import java.net.URI
 import java.net.http.HttpClient
@@ -28,6 +31,7 @@ class OpenXblSource(private val apiKey: String): Source {
         val request = HttpRequest.newBuilder()
                 .uri(URI.create("$host/friends/search?gt=$username"))
                 .header("X-Authorization", apiKey)
+                .header("X-Contract", "100")
                 .GET()
                 .build()
 
@@ -52,6 +56,7 @@ class OpenXblSource(private val apiKey: String): Source {
         val request = HttpRequest.newBuilder()
                 .uri(URI.create("$host/achievements/player/$userId"))
                 .header("X-Authorization", apiKey)
+                .header("X-Contract", "100")
                 .GET()
                 .build()
 
@@ -71,6 +76,7 @@ class OpenXblSource(private val apiKey: String): Source {
         val request = HttpRequest.newBuilder()
                 .uri(URI.create("$host/achievements/title/$appId"))
                 .header("X-Authorization", apiKey)
+                .header("X-Contract", "100")
                 .GET()
                 .build()
 
@@ -93,6 +99,7 @@ class OpenXblSource(private val apiKey: String): Source {
         val request = HttpRequest.newBuilder()
                 .uri(URI.create("$host/achievements/player/$userId/title/$appId"))
                 .header("X-Authorization", apiKey)
+                .header("X-Contract", "100")
                 .GET()
                 .build()
 
