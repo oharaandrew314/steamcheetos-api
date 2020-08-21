@@ -16,7 +16,8 @@ data class ListAchievementsResponse(
             val lockedDescription: String,
             val rarity: Rarity?,
             val progressState: String,
-            val progression: Progression
+            val progression: Progression,
+            val rewards: Collection<Reward>
     )
 
     data class MediaAsset(
@@ -40,5 +41,14 @@ data class ListAchievementsResponse(
             val target: String,
             val operationType: String,  // known values are "Maximum",
             val valueType: String // known values are "Integer"
+    )
+
+    data class Reward(
+            val name: String?,
+            val description: String?,
+            val value: String,
+            val type: String, // known values are "Gamerscore"
+            val mediaAsset: String?,
+            val valueType: String,  // known values are "Int"
     )
 }

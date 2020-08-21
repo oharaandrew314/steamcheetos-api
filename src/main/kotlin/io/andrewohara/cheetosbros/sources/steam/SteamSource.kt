@@ -54,7 +54,14 @@ class SteamSource(private val apiKey: String): Source {
                 .game
                 .availableGameStats
                 ?.achievements
-                ?.map { Achievement(gameId = appId, id = it.name, name = it.displayName, hidden = it.hidden == 1, icons = listOf(it.icon, it.icongray), description = it.description) }
+                ?.map { Achievement(
+                        id = it.name,
+                        name = it.displayName,
+                        hidden = it.hidden == 1,
+                        icons = listOf(it.icon, it.icongray),
+                        description = it.description,
+                        score = null
+                ) }
                 ?: emptySet()
     }
 
@@ -73,7 +80,7 @@ class SteamSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), GetPlayerAchievementsResponse::class.java)
                 .playerstats
                 .achievements
-                ?.map { AchievementStatus(id = it.apiname, unlockedOn = if (it.unlocktime > 0) Instant.ofEpochSecond(it.unlocktime) else null) }
+                ?.map { AchievementStatus(achievementId = it.apiname, unlockedOn = if (it.unlocktime > 0) Instant.ofEpochSecond(it.unlocktime) else null) }
                 ?: emptyList()
     }
 
@@ -93,7 +100,7 @@ class SteamSource(private val apiKey: String): Source {
                 .let { if (it.success == 1) it.steamid!! else null }
     }
 
-    fun getPlayer(id: String): Player? {
+    override fun getPlayer(id: String): Player? {
         val request = HttpRequest.newBuilder()
                 .uri("ISteamUser","GetPlayerSummaries", 2, params = mapOf("steamids" to id))
                 .GET()

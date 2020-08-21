@@ -2,11 +2,12 @@ package io.andrewohara.cheetosbros.api.games.v1
 
 import io.andrewohara.cheetosbros.api.auth.CheetosRole
 import io.andrewohara.cheetosbros.api.users.User
+import io.andrewohara.cheetosbros.sources.SyncExecutor
 import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil.roles
 import io.javalin.http.Context
 
-class GamesControllerV1(private val gamesHandler: GamesHandler) {
+class GamesControllerV1(private val gamesHandler: GamesManager, private val syncExecutor: SyncExecutor) {
 
     fun register(app: Javalin) {
         app.post("/v1/games/sync", ::sync, roles(CheetosRole.User))
@@ -16,7 +17,7 @@ class GamesControllerV1(private val gamesHandler: GamesHandler) {
     private fun sync(ctx: Context) {
         val user = ctx.attribute<User>("user")!!
 
-        gamesHandler.syncPlatform(user)
+        syncExecutor.sync(user)
     }
 
     private fun listGames(ctx: Context) {

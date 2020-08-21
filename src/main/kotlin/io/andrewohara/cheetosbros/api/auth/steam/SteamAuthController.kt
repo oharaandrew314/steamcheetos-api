@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros.api.auth.steam
 
 import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.CheetosRole
+import io.andrewohara.cheetosbros.sources.Source
 import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil.roles
@@ -9,7 +10,7 @@ import io.javalin.http.Context
 import io.javalin.http.UnauthorizedResponse
 import org.apache.http.client.utils.URIBuilder
 
-class SteamAuthController(private val steamApi: SteamSource, private val authManager: AuthManager) {
+class SteamAuthController(steamApi: Source, private val authManager: AuthManager) {
 
     private val steamOpenId = SteamOpenID(steamApi)
 

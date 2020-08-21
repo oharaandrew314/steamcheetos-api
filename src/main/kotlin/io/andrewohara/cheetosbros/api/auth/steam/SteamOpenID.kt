@@ -2,14 +2,14 @@ package io.andrewohara.cheetosbros.api.auth.steam
 
 import io.andrewohara.cheetosbros.api.users.SocialLink
 import io.andrewohara.cheetosbros.sources.Game
-import io.andrewohara.cheetosbros.sources.steam.SteamSource
+import io.andrewohara.cheetosbros.sources.Source
 import org.openid4java.consumer.ConsumerManager
 import org.openid4java.discovery.DiscoveryInformation
 import org.openid4java.message.ParameterList
 import java.util.regex.Pattern
 
 
-class SteamOpenID(private val steamApi: SteamSource) {
+class SteamOpenID(private val steamApi: Source) {
     companion object {
         private const val STEAM_OPENID = "http://steamcommunity.com/openid"
         private val STEAM_REGEX = Pattern.compile("(\\d+)")

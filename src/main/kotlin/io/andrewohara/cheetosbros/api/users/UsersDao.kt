@@ -6,9 +6,9 @@ import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.sources.Game
 
-class UsersDao(tableName: String, client: AmazonDynamoDB? = null) {
+class UsersDao(tableName: String, client: AmazonDynamoDB) {
 
-    private val mapper = DynamoUtils.mapper<DynamoUser, String, Void>(tableName, client)
+    val mapper = DynamoUtils.mapper<DynamoUser, String, Void>(tableName, client)
 
     operator fun get(cheetosUserId: String): User? {
         return mapper.load(cheetosUserId)?.toItem()

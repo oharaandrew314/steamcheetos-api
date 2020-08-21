@@ -3,10 +3,7 @@ package io.andrewohara.cheetosbros.sources.openxbl
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.andrewohara.cheetosbros.sources.Achievement
-import io.andrewohara.cheetosbros.sources.Source
-import io.andrewohara.cheetosbros.sources.Game
-import io.andrewohara.cheetosbros.sources.AchievementStatus
+import io.andrewohara.cheetosbros.sources.*
 import java.lang.IllegalStateException
 import java.net.URI
 import java.net.http.HttpClient
@@ -26,6 +23,10 @@ class OpenXblSource(private val apiKey: String): Source {
     }
 
     private val client = HttpClient.newHttpClient()
+
+    override fun getPlayer(id: String): Player? {
+        TODO("Not yet implemented")
+    }
 
     override fun resolveUserId(username: String): String? {
         val request = HttpRequest.newBuilder()
@@ -88,11 +89,10 @@ class OpenXblSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), ListAchievementsResponse::class.java)
                 .achievements
                 .map { Achievement(
-                        gameId = appId,
                         id = it.id, name = it.name, description = it.lockedDescription, hidden = it.isSecret,
-                        icons = it.mediaAssets.filter { asset -> asset.type == "Icon" }.map { asset -> asset.url }
+                        icons = it.mediaAssets.filter { asset -> asset.type == "Icon" }.map { asset -> asset.url },
+                        score = it.rewards.firstOrNull { reward -> reward.type == "Gamerscore" }?.value?.toIntOrNull()
                 ) }
-
     }
 
     override fun userAchievements(appId: String, userId: String): Collection<AchievementStatus> {
@@ -111,7 +111,7 @@ class OpenXblSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), ListAchievementsResponse::class.java)
                 .achievements
                 .map { AchievementStatus(
-                        id = it.id,
+                        achievementId = it.id,
                         unlockedOn = if (it.progressState == "Achieved") it.progression.timeUnlocked else null
                 ) }
     }
