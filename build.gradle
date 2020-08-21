@@ -17,7 +17,7 @@ ext {
     ver = [
             slf4j: '1.7.30',
             javalin: '3.9.1',
-            jackson: '2.11.1',
+            jackson: '2.11.2',
             aws: '1.11.845'
     ]
 }
@@ -26,7 +26,7 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation group: 'io.javalin', name: 'javalin', version: ver.javalin
     implementation group: 'io.javalin', name: 'javalin-openapi', version: ver.javalin
-    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-kotlin-module', version: ver.jackson
+    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: ver.jackson
     implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr353', version: ver.jackson
     implementation group: 'org.openid4java', name: 'openid4java', version: '1.0.0'
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
