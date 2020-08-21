@@ -1,33 +1,38 @@
 package io.andrewohara.cheetosbros.sources
 
-import io.andrewohara.cheetosbros.api.users.User
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 interface SyncExecutor {
 
-    fun sync(user: User)
+    fun run(task: () -> Unit)
+    fun <T> call(task: () -> T): Future<T>
 }
 
-class LocalSyncExecutor(private val sourcesHandler: SourcesManager, threads: Int = 20): SyncExecutor {
+class ThreadPoolSyncExecutor(threads: Int = 20): SyncExecutor {
 
     private val executor = Executors.newFixedThreadPool(threads)
 
-    override fun sync(user: User) {
-        executor.run {
-            val xboxGames = sourcesHandler.discoverGames(user, Game.Platform.Xbox)
-            for (game in xboxGames) {
-                executor.run {
-                    sourcesHandler.syncGame(user, game)
-                }
-            }
-        }
-        executor.run {
-            val steamGames = sourcesHandler.discoverGames(user, Game.Platform.Steam)
-            for (game in steamGames) {
-                executor.run {
-                    sourcesHandler.syncGame(user, game)
-                }
-            }
-        }
+    override fun run(task: () -> Unit) {
+        executor.submit(task)
+    }
+
+    override fun <T> call(task: () -> T): Future<T> = executor.submit(task)
+}
+
+class InlineSyncExecutor: SyncExecutor {
+
+    override fun run(task: () -> Unit) = task()
+
+    override fun <T> call(task: () -> T): Future<T> = FakeFuture(task())
+
+    private class FakeFuture<T>(private val result: T): Future<T> {
+        override fun cancel(mayInterruptIfRunning: Boolean) = false
+        override fun isCancelled() = false
+        override fun isDone() = true
+
+        override fun get() = result
+        override fun get(timeout: Long, unit: TimeUnit) = result
     }
 }

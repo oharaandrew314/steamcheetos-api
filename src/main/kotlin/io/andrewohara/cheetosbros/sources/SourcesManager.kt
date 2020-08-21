@@ -36,7 +36,7 @@ class SourcesManager(
         val achievements = source.achievements(game.id)
         achievementsDao.batchSave(game, achievements)
 
-        val userGame = UserGame(gameUuid = game.uuid, lastPlayed = null)
+        val userGame = UserGame(gameUuid = game.uuid, lastPlayed = null)  // TODO save last played
         userGamesDao.save(user, userGame)
 
         val userAchievements = source.userAchievements(appId = game.id, userId = socialLink.id)

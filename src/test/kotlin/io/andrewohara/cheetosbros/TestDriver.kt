@@ -24,6 +24,9 @@ class TestDriver: ExternalResource() {
 
     lateinit var sourcesManager: SourcesManager
     lateinit var gamesManager: GamesManager
+    lateinit var syncManager: SyncManager
+
+    private val syncExecutor = InlineSyncExecutor()
 
     override fun before() {
         val dynamoDb = MockAmazonDynamoDB()
@@ -48,19 +51,8 @@ class TestDriver: ExternalResource() {
 
         sourcesManager = SourcesManager(steamSource, gamesDao, achievementsDao, userGamesDao, achievementStatusDao)
         gamesManager = GamesManager(gamesDao, userGamesDao, achievementsDao, achievementStatusDao)
+        syncManager = SyncManager(syncExecutor, sourcesManager)
     }
-
-    private fun  Game.Platform.source() = when(this) {
-        Game.Platform.Steam -> steamSource
-        Game.Platform.Xbox -> xboxSource
-    }
-
-    private fun Player.socialLink(token: String? = null) = SocialLink(
-            id = id,
-            username = displayName,
-            platform = platform,
-            token = token
-    )
 
     fun createUser(displayName: String? = null, vararg players: Player): User {
         val id = UUID.randomUUID().toString()
@@ -101,13 +93,13 @@ class TestDriver: ExternalResource() {
         return game
     }
 
-    fun createAchievement(game: Game, name: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
+    fun createAchievement(game: Game, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
         val id = UUID.randomUUID().toString()
         val actualName = name ?: "achievement-$id"
         val achievement = Achievement(
                 id = id,
                 name = actualName,
-                description = "description for $actualName",
+                description = description ?: "description for $actualName",
                 hidden = hidden,
                 icons = emptyList(),
                 score = score
@@ -134,4 +126,20 @@ class TestDriver: ExternalResource() {
 
         source.addGameToLibrary(player.id, game.id)
     }
+
+    fun sync(user: User) {
+        syncManager.sync(user)
+    }
+
+    private fun Game.Platform.source() = when(this) {
+        Game.Platform.Steam -> steamSource
+        Game.Platform.Xbox -> xboxSource
+    }
+
+    private fun Player.socialLink(token: String? = null) = SocialLink(
+            id = id,
+            username = displayName,
+            platform = platform,
+            token = token
+    )
 }
