@@ -12,7 +12,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
-import kotlin.math.exp
 
 class GamesManagerTest {
 
@@ -120,5 +119,26 @@ class GamesManagerTest {
         )
 
         assertThat(testObj.listAchievements(user, satisfactory.uuid)).containsExactlyInAnyOrder(*expected.toTypedArray())
+    }
+
+    @Test
+    fun `get missing game`() {
+        assertThat(testObj.getGame("missingGame")).isNull()
+    }
+
+    @Test
+    fun `get game you don't own`() {
+        val callOfDuty100 = driver.createGame(name = "Call of Duty 100 - we're not even trying anymore")
+        val otherPlayer = driver.createPlayer()
+        val otherUser = driver.createUser(displayName = "otherUser", otherPlayer)
+        driver.addToLibrary(callOfDuty100, otherPlayer)
+        driver.sync(otherUser)
+
+        assertThat(testObj.getGame(callOfDuty100.uuid)).isEqualTo(callOfDuty100)
+    }
+
+    @Test
+    fun `get game`() {
+        assertThat(testObj.getGame(me3.uuid)).isEqualTo(me3)
     }
 }

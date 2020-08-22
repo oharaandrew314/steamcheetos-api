@@ -13,7 +13,8 @@ class GamesControllerV1(private val gamesHandler: GamesManager, private val sync
     fun register(app: Javalin) {
         app.post("/v1/games/sync", ::sync, roles(CheetosRole.User))
         app.get("/v1/games", ::listGames, roles(CheetosRole.User))
-        app.get("/v1/games/:game_uuid/achievements", ::listAchievements, roles(CheetosRole.User))
+        app.get("/v1/games/:uuid", ::getGame, roles(CheetosRole.User))
+        app.get("/v1/games/:uuid/achievements", ::listAchievements, roles(CheetosRole.User))
     }
 
     private fun sync(ctx: Context) {
@@ -30,9 +31,17 @@ class GamesControllerV1(private val gamesHandler: GamesManager, private val sync
         ctx.json(games)
     }
 
+    private fun getGame(ctx: Context) {
+        val gameUuid = ctx.pathParam("uuid")
+
+        val game = gamesHandler.getGame(gameUuid) ?: throw NotFoundResponse()
+
+        ctx.json(game)
+    }
+
     private fun listAchievements(ctx: Context) {
         val user = ctx.attribute<User>("user")!!
-        val gameUuid = ctx.pathParam("game_uuid")
+        val gameUuid = ctx.pathParam("uuid")
 
         val achievements = gamesHandler.listAchievements(user, gameUuid) ?: throw NotFoundResponse()
 

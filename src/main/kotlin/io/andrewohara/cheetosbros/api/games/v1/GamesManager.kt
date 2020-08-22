@@ -41,6 +41,10 @@ class GamesManager(
         }
     }
 
+    fun getGame(gameUuid: String): Game? {
+        return gamesDao[gameUuid]
+    }
+
     data class AchievementDetails(
             val achievement: Achievement,
             val status: AchievementStatus
