@@ -25,7 +25,29 @@ class OpenXblSource(private val apiKey: String): Source {
     private val client = HttpClient.newHttpClient()
 
     override fun getPlayer(id: String): Player? {
-        TODO("Not yet implemented")
+        val request = HttpRequest.newBuilder()
+                .uri(URI.create("$host/account/$id"))
+                .header("X-Authorization", apiKey)
+                .header("X-Contract", "100")
+                .GET()
+                .build()
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() != 200) {
+            throw IllegalStateException("Request failed: $response")
+        }
+
+        val profile = mapper.readValue(response.body(), GetAccountResponse::class.java)
+                .profileUsers
+                .firstOrNull()
+                ?: return null
+
+        return Player(
+                id = profile.id,
+                platform = Game.Platform.Xbox,
+                username = profile.getGamertag()!!,
+                avatar = profile.getAvatar()
+        )
     }
 
     override fun resolveUserId(username: String): String? {
@@ -114,5 +136,23 @@ class OpenXblSource(private val apiKey: String): Source {
                         achievementId = it.id,
                         unlockedOn = if (it.progressState == "Achieved") it.progression.timeUnlocked else null
                 ) }
+    }
+
+    override fun getFriends(userId: String): Collection<String> {
+        val request = HttpRequest.newBuilder()
+                .uri(URI.create("$host/friends"))
+                .header("X-Authorization", apiKey)
+                .header("X-Contract", "100")
+                .GET()
+                .build()
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() != 200) {
+            throw IllegalStateException("Request failed: $response")
+        }
+
+        return mapper.readValue(response.body(), ListFriendsResponse::class.java)
+                .people
+                .map { it.xuid }
     }
 }

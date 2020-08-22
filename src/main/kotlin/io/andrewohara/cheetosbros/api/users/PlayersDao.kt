@@ -20,6 +20,10 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
         return mapper.load("$platform-$id")?.toPlayer()
     }
 
+    fun batchGet(uuids: Collection<String>): Collection<Player> {
+        return mapper.batchLoad(uuids.map { DynamoPlayer(uuid = it) }).map { it.toPlayer() }
+    }
+
     @DynamoDBDocument
     data class DynamoPlayer(
             @DynamoDBHashKey

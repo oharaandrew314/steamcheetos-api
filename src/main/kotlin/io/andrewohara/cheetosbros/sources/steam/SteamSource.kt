@@ -127,9 +127,21 @@ class SteamSource(private val apiKey: String): Source {
                 }
     }
 
-//    override fun getFriends(userId: String): Collection<Player> {
-//        TODO("Not yet implemented")
-//    }
+    override fun getFriends(userId: String): Collection<String> {
+        val request = HttpRequest.newBuilder()
+                .uri("ISteamUser","GetFriendList", 1, steamId = userId.toLong(), params = mapOf("relationship" to "friend"))
+                .GET()
+                .build()
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() != 200) {
+            throw IllegalStateException("Request failed: $response")
+        }
+
+        val responseBody = mapper.readValue(response.body(), GetFriendListResponse::class.java)
+
+        return responseBody.friendslist.friends.map { it.steamid }
+    }
 
     private fun HttpRequest.Builder.uri(service: String, method: String, version: Int, steamId: Long? = null, params: Map<String, String> = emptyMap()): HttpRequest.Builder {
         val fullParams = params.toMutableMap().apply {

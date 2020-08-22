@@ -7,6 +7,7 @@ class FakeSource: Source {
     private val players = mutableMapOf<String, Player>()
     private val games = mutableMapOf<String, Game>()
 
+    private val friendIds = mutableMapOf<Player, MutableSet<Player>>()
     private val userGames = mutableMapOf<Player, MutableSet<Game>>()
     private val achievements = mutableMapOf<Game, MutableSet<Achievement>>()
     private val userAchievements = mutableMapOf<Pair<Game, Player>, MutableSet<AchievementStatus>>()
@@ -18,6 +19,7 @@ class FakeSource: Source {
     fun addPlayer(player: Player) {
         players[player.id] = player
         userGames[player] = mutableSetOf()
+        friendIds[player] = mutableSetOf()
     }
 
     override fun resolveUserId(username: String): String? {
@@ -68,5 +70,24 @@ class FakeSource: Source {
         val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
 
         userAchievements.getValue(game to player).add(achievementStatus)
+    }
+
+    override fun getFriends(userId: String): Collection<String> {
+        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
+        return friendIds.getValue(player).map { it.id }
+    }
+
+    fun addFriend(userId: String, friendId: String) {
+        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
+        val friend = getPlayer(friendId) ?: throw IllegalArgumentException("Player $userId does not exist")
+
+        friendIds.getValue(player).add(friend)
+    }
+
+    fun removeFriend(userId: String, friendId: String) {
+        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
+        val friend = getPlayer(friendId) ?: throw IllegalArgumentException("Player $userId does not exist")
+
+        friendIds.getValue(player).remove(friend)
     }
 }

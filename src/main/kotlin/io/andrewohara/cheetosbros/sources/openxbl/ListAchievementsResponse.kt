@@ -48,7 +48,7 @@ data class ListAchievementsResponse(
             val description: String?,
             val value: String,
             val type: String, // known values are "Gamerscore"
-            val mediaAsset: String?,
+            val mediaAsset: MediaAsset?,
             val valueType: String,  // known values are "Int"
     )
 }

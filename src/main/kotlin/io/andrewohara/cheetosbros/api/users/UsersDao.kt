@@ -46,6 +46,7 @@ class UsersDao(tableName: String, client: AmazonDynamoDB, private val playersDao
             @DynamoDBHashKey
             var id: String? = null,
             var displayName: String? = null,
+            var openxblToken: String? = null,
 
             @DynamoDBIndexHashKey(globalSecondaryIndexName = "xuid")
             var xuid: String? = null,
@@ -57,7 +58,8 @@ class UsersDao(tableName: String, client: AmazonDynamoDB, private val playersDao
                 id = id!!,
                 displayName = displayName!!,
                 xbox = xboxPlayer,
-                steam = steamPlayer
+                steam = steamPlayer,
+                openxblToken = openxblToken
         )
 
         constructor(user: User): this(
@@ -65,6 +67,7 @@ class UsersDao(tableName: String, client: AmazonDynamoDB, private val playersDao
                 displayName = user.displayName,
                 xuid = user.xbox?.id,
                 steamId64 = user.steam?.id,
+                openxblToken = user.openxblToken
         )
     }
 }

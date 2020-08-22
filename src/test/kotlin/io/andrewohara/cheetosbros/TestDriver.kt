@@ -3,9 +3,7 @@ package io.andrewohara.cheetosbros
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
 import io.andrewohara.cheetosbros.api.games.v1.*
-import io.andrewohara.cheetosbros.api.users.PlayersDao
-import io.andrewohara.cheetosbros.api.users.User
-import io.andrewohara.cheetosbros.api.users.UsersDao
+import io.andrewohara.cheetosbros.api.users.*
 import io.andrewohara.cheetosbros.sources.*
 import org.junit.rules.ExternalResource
 import java.time.Instant
@@ -19,13 +17,16 @@ class TestDriver: ExternalResource() {
     private lateinit var achievementsDao: AchievementsDao
     private lateinit var userGamesDao: UserGamesDao
     private lateinit var achievementStatusDao: AchievementStatusDao
+    private lateinit var friendsDao: FriendsDao
 
     private lateinit var steamSource: FakeSource
     private lateinit var xboxSource: FakeSource
+    private lateinit var sourceFactory: SourceFactory
 
     lateinit var sourcesManager: SourcesManager
     lateinit var gamesManager: GamesManager
     lateinit var syncManager: SyncManager
+    lateinit var usersManager: UsersManager
 
     private val syncExecutor = InlineSyncExecutor()
 
@@ -50,12 +51,17 @@ class TestDriver: ExternalResource() {
         achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb)
         achievementStatusDao.mapper.createTable(ProvisionedThroughput(1, 1))
 
+        friendsDao = FriendsDao("friends", dynamoDb)
+        friendsDao.mapper.createTable(ProvisionedThroughput(1, 1))
+
         steamSource = FakeSource()
         xboxSource = FakeSource()
+        sourceFactory = FakeSourceFactory(steamSource = steamSource, xboxSource = xboxSource)
 
-        sourcesManager = SourcesManager(steamSource, gamesDao, achievementsDao, userGamesDao, achievementStatusDao)
+        sourcesManager = SourcesManager(sourceFactory, gamesDao, achievementsDao, userGamesDao, achievementStatusDao, playersDao, friendsDao)
         gamesManager = GamesManager(gamesDao, userGamesDao, achievementsDao, achievementStatusDao)
         syncManager = SyncManager(syncExecutor, sourcesManager)
+        usersManager = UsersManager(usersDao, playersDao, friendsDao)
     }
 
     fun createUser(displayName: String? = null, vararg players: Player): User {
@@ -64,7 +70,8 @@ class TestDriver: ExternalResource() {
                 id = id,
                 displayName = displayName ?: "user-$id",
                 xbox = players.firstOrNull { it.platform == Game.Platform.Xbox },
-                steam = players.firstOrNull { it.platform == Game.Platform.Steam }
+                steam = players.firstOrNull { it.platform == Game.Platform.Steam },
+                openxblToken = if (players.any { it.platform == Game.Platform.Xbox }) "token" else null
         )
         usersDao.save(user)
 
@@ -129,6 +136,16 @@ class TestDriver: ExternalResource() {
         val source = game.platform.source()
 
         source.addGameToLibrary(player.id, game.id)
+    }
+
+    fun addFriend(player: Player, friend: Player) {
+        val source = player.platform.source()
+        source.addFriend(userId = player.id, friendId = friend.id)
+    }
+
+    fun removeFriend(player: Player, friend: Player) {
+        val source = player.platform.source()
+        source.removeFriend(userId = player.id, friendId = friend.id)
     }
 
     fun sync(user: User) {

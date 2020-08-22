@@ -93,3 +93,18 @@ Resources:
       KeySchema:
         - AttributeName: uuid
           KeyType: HASH
+
+  Friends:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: uuid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: uuid
+          KeyType: RANGE

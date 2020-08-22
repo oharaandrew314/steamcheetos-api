@@ -7,7 +7,9 @@ data class Player(
         val platform: Game.Platform,
         val username: String,
         val avatar: String?
-)
+) {
+    val uuid = "$platform-$id"
+}
 
 data class Game(
         val id: String,
@@ -44,7 +46,7 @@ data class AchievementStatus(
 
 interface Source {
     fun getPlayer(id: String): Player?
-//    fun getFriends(userId: String): Collection<Player>
+    fun getFriends(userId: String): Collection<String>
     fun resolveUserId(username: String): String?
     fun games(userId: String): Collection<Game>
     fun achievements(appId: String): Collection<Achievement>
