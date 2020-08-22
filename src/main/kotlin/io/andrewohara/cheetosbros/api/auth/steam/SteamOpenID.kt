@@ -1,7 +1,7 @@
 package io.andrewohara.cheetosbros.api.auth.steam
 
-import io.andrewohara.cheetosbros.api.users.SocialLink
 import io.andrewohara.cheetosbros.sources.Game
+import io.andrewohara.cheetosbros.sources.Player
 import io.andrewohara.cheetosbros.sources.Source
 import org.openid4java.consumer.ConsumerManager
 import org.openid4java.discovery.DiscoveryInformation
@@ -32,7 +32,7 @@ class SteamOpenID(private val steamApi: Source) {
     /**
      * Verify OpenID Authentication response and return steamId64
      */
-    fun verifyResponse(receivingUrl: String, responseMap: Map<String, String>): SocialLink? {
+    fun verifyResponse(receivingUrl: String, responseMap: Map<String, String>): Player? {
         val responseList = ParameterList(responseMap)
 
         val verification = manager.verify(receivingUrl, responseList, discovered)
@@ -45,11 +45,11 @@ class SteamOpenID(private val steamApi: Source) {
         val steamId64 = matcher.group(1)
         val userProfile = steamApi.getPlayer(steamId64) ?: return null
 
-        return SocialLink(
+        return Player(
                 platform = Game.Platform.Steam,
                 id = steamId64,
-                username = userProfile.displayName,
-                token = null
+                username = userProfile.username,
+                avatar = userProfile.avatar
         )
     }
 }

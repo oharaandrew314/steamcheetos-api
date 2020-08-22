@@ -3,7 +3,7 @@ package io.andrewohara.cheetosbros
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
 import io.andrewohara.cheetosbros.api.games.v1.*
-import io.andrewohara.cheetosbros.api.users.SocialLink
+import io.andrewohara.cheetosbros.api.users.PlayersDao
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.api.users.UsersDao
 import io.andrewohara.cheetosbros.sources.*
@@ -13,6 +13,7 @@ import java.util.*
 
 class TestDriver: ExternalResource() {
 
+    private lateinit var playersDao: PlayersDao
     private lateinit var usersDao: UsersDao
     private lateinit var gamesDao: GamesDao
     private lateinit var achievementsDao: AchievementsDao
@@ -31,7 +32,10 @@ class TestDriver: ExternalResource() {
     override fun before() {
         val dynamoDb = MockAmazonDynamoDB()
 
-        usersDao = UsersDao("users", dynamoDb)
+        playersDao = PlayersDao("players", dynamoDb)
+        playersDao.mapper.createTable(ProvisionedThroughput(1, 1))
+
+        usersDao = UsersDao("users", dynamoDb, playersDao)
         usersDao.mapper.createTable(ProvisionedThroughput(1, 1))
 
         gamesDao = GamesDao("games", dynamoDb)
@@ -59,8 +63,8 @@ class TestDriver: ExternalResource() {
         val user = User(
                 id = id,
                 displayName = displayName ?: "user-$id",
-                xbox = players.firstOrNull { it.platform == Game.Platform.Xbox }?.socialLink(),
-                steam = players.firstOrNull { it.platform == Game.Platform.Steam }?.socialLink()
+                xbox = players.firstOrNull { it.platform == Game.Platform.Xbox },
+                steam = players.firstOrNull { it.platform == Game.Platform.Steam }
         )
         usersDao.save(user)
 
@@ -73,7 +77,7 @@ class TestDriver: ExternalResource() {
                 id = id,
                 avatar = null,
                 platform = platform,
-                displayName = displayName ?: "player-$id"
+                username = displayName ?: "player-$id"
         )
         platform.source().addPlayer(player)
         return player
@@ -135,11 +139,4 @@ class TestDriver: ExternalResource() {
         Game.Platform.Steam -> steamSource
         Game.Platform.Xbox -> xboxSource
     }
-
-    private fun Player.socialLink(token: String? = null) = SocialLink(
-            id = id,
-            username = displayName,
-            platform = platform,
-            token = token
-    )
 }

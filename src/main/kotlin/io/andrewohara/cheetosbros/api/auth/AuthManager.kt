@@ -1,8 +1,8 @@
 package io.andrewohara.cheetosbros.api.auth
 
-import io.andrewohara.cheetosbros.api.users.SocialLink
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.api.users.UsersManager
+import io.andrewohara.cheetosbros.sources.Player
 import io.javalin.core.security.AccessManager
 import io.javalin.core.security.Role
 import io.javalin.http.BadRequestResponse
@@ -40,16 +40,16 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
         ctx.cookie(ID_TOKEN_NAME, token)
     }
 
-    fun login(ctx: Context, socialLink: SocialLink) {
+    fun login(ctx: Context, player: Player, token: String?) {
         val loggedInUser = getAuthorizedUser(ctx)
-        val linkedUser = usersManager[socialLink]
+        val linkedUser = usersManager[player]
 
         val effectiveUser = when {
             linkedUser == null && loggedInUser == null -> {
-                usersManager.createUser(socialLink)
+                usersManager.createUser(player, token)
             }
             linkedUser == null && loggedInUser != null -> {
-                usersManager.linkSocialLogin(loggedInUser, socialLink)
+                usersManager.linkSocialLogin(loggedInUser, player, token)
             }
             linkedUser != null && loggedInUser == null -> {
                 linkedUser

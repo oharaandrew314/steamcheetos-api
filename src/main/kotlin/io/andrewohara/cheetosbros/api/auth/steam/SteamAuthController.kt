@@ -3,7 +3,6 @@ package io.andrewohara.cheetosbros.api.auth.steam
 import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.CheetosRole
 import io.andrewohara.cheetosbros.sources.Source
-import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil.roles
 import io.javalin.http.Context
@@ -34,9 +33,9 @@ class SteamAuthController(steamApi: Source, private val authManager: AuthManager
 
     private fun callback(ctx: Context) {
         val params = ctx.queryParamMap().filterKeys { it.startsWith("openid") }.mapValues { it.value.first() }
-        val socialLink = steamOpenId.verifyResponse(ctx.url(), params) ?: throw UnauthorizedResponse()
+        val player = steamOpenId.verifyResponse(ctx.url(), params) ?: throw UnauthorizedResponse()
 
-        authManager.login(ctx, socialLink)
+        authManager.login(ctx, player, null)
 
         ctx.redirect(frontendRedirectUrl)
     }

@@ -82,3 +82,14 @@ Resources:
           KeyType: HASH
         - AttributeName: achievementId
           KeyType: RANGE
+
+  Players:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uuid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uuid
+          KeyType: HASH

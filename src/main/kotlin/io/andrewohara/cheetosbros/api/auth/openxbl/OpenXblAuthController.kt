@@ -28,9 +28,9 @@ class OpenXblAuthController(publicAppKey: String, private val authManager: AuthM
 
     private fun callback(ctx: Context) {
         val code = ctx.queryParam<String>("code").get()
-        val socialLink = openXblAuth.verify(code)
+        val (player, token) = openXblAuth.verify(code)
 
-        authManager.login(ctx, socialLink)
+        authManager.login(ctx, player, token)
 
         ctx.redirect(frontendRedirectUrl)
     }

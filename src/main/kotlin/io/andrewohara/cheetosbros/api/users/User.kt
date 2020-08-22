@@ -1,29 +1,24 @@
 package io.andrewohara.cheetosbros.api.users
 
 import io.andrewohara.cheetosbros.sources.Game
+import io.andrewohara.cheetosbros.sources.Player
 
 data class User(
         val id: String,
         val displayName: String,
-        val xbox: SocialLink? = null,
-        val steam: SocialLink? = null
+        val xbox: Player? = null,
+        val steam: Player? = null,
+        val openxblToken: String? = null
 ) {
-    fun socialLinkForPlatform(platform: Game.Platform) = when(platform) {
+    fun playerForPlatform(platform: Game.Platform) = when(platform) {
         Game.Platform.Xbox -> xbox
         Game.Platform.Steam -> steam
     }
 
-    fun withSocialLink(socialLink: SocialLink): User {
-        return when(socialLink.platform) {
-            Game.Platform.Xbox -> copy(xbox = socialLink)
-            Game.Platform.Steam -> copy(steam = socialLink)
+    fun withPlayer(player: Player, token: String?): User {
+        return when(player.platform) {
+            Game.Platform.Xbox -> copy(xbox = player, openxblToken = token)
+            Game.Platform.Steam -> copy(steam = player)
         }
     }
 }
-
-data class SocialLink(
-        val id: String,
-        val username: String,
-        val platform: Game.Platform,
-        val token: String?
-)

@@ -4,13 +4,19 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.sources.Game
+import io.andrewohara.cheetosbros.sources.Player
 
-class UsersDao(tableName: String, client: AmazonDynamoDB) {
+class UsersDao(tableName: String, client: AmazonDynamoDB, private val playersDao: PlayersDao) {
 
     val mapper = DynamoUtils.mapper<DynamoUser, String, Void>(tableName, client)
 
     operator fun get(cheetosUserId: String): User? {
-        return mapper.load(cheetosUserId)?.toItem()
+        val item = mapper.load(cheetosUserId) ?: return null
+
+        val steamPlayer = item.steamId64?.let { playersDao[Game.Platform.Steam, it] }
+        val xboxPlayer = item.xuid?.let { playersDao[Game.Platform.Xbox, it] }
+
+        return item.toUser(xboxPlayer = xboxPlayer, steamPlayer = steamPlayer)
     }
 
     operator fun get(platform: Game.Platform, socialUserId: String): User? {
@@ -25,7 +31,9 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
                     .withConsistentRead(false)
         }
 
-        return mapper.query(query).firstOrNull()?.toItem()
+        val userId = mapper.query(query).firstOrNull()?.id ?: return null
+
+        return get(userId)
     }
 
     fun save(user: User) {
@@ -41,46 +49,22 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
 
             @DynamoDBIndexHashKey(globalSecondaryIndexName = "xuid")
             var xuid: String? = null,
-            var xboxGamertag: String? = null,
-            var openxblToken: String? = null,
 
             @DynamoDBIndexHashKey(globalSecondaryIndexName = "steamId64")
             var steamId64: String? = null,
-            var steamUsername: String? = null
     ) {
-        fun toItem() = User(
+        fun toUser(xboxPlayer: Player?, steamPlayer: Player?) = User(
                 id = id!!,
                 displayName = displayName!!,
-                xbox = xuid?.let {
-                    SocialLink(
-                            id = xuid!!,
-                            platform = Game.Platform.Xbox,
-                            username = xboxGamertag!!,
-                            token = openxblToken!!
-                    )
-                },
-                steam = steamId64?.let {
-                    SocialLink(
-                            id = steamId64!!,
-                            username = steamUsername!!,
-                            platform = Game.Platform.Steam,
-                            token = null
-                    )
-                }
+                xbox = xboxPlayer,
+                steam = steamPlayer
         )
 
         constructor(user: User): this(
                 id = user.id,
                 displayName = user.displayName,
-
                 xuid = user.xbox?.id,
-                xboxGamertag = user.xbox?.username,
-                openxblToken = user.xbox?.token,
-
                 steamId64 = user.steam?.id,
-                steamUsername = user.steam?.username
         )
     }
-
-
 }

@@ -5,7 +5,7 @@ import java.time.Instant
 data class Player(
         val id: String,
         val platform: Game.Platform,
-        val displayName: String,
+        val username: String,
         val avatar: String?
 )
 
@@ -44,6 +44,7 @@ data class AchievementStatus(
 
 interface Source {
     fun getPlayer(id: String): Player?
+//    fun getFriends(userId: String): Collection<Player>
     fun resolveUserId(username: String): String?
     fun games(userId: String): Collection<Game>
     fun achievements(appId: String): Collection<Achievement>

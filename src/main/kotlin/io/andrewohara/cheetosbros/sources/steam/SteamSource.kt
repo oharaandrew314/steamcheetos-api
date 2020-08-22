@@ -121,11 +121,15 @@ class SteamSource(private val apiKey: String): Source {
                     Player(
                             id = it.steamid,
                             platform = Game.Platform.Steam,
-                            displayName = it.personaname,
+                            username = it.personaname,
                             avatar = it.avatarfull
                     )
                 }
     }
+
+//    override fun getFriends(userId: String): Collection<Player> {
+//        TODO("Not yet implemented")
+//    }
 
     private fun HttpRequest.Builder.uri(service: String, method: String, version: Int, steamId: Long? = null, params: Map<String, String> = emptyMap()): HttpRequest.Builder {
         val fullParams = params.toMutableMap().apply {

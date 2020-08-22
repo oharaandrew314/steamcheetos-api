@@ -8,6 +8,7 @@ import io.andrewohara.cheetosbros.api.auth.PemUtils
 import io.andrewohara.cheetosbros.api.auth.openxbl.OpenXblAuthController
 import io.andrewohara.cheetosbros.api.auth.steam.SteamAuthController
 import io.andrewohara.cheetosbros.api.games.v1.*
+import io.andrewohara.cheetosbros.api.users.PlayersDao
 import io.andrewohara.cheetosbros.api.users.UsersDao
 import io.andrewohara.cheetosbros.api.users.UsersManager
 import io.andrewohara.cheetosbros.sources.*
@@ -22,6 +23,7 @@ class ApiServer(
         userGamesDao: UserGamesDao,
         achievementStatusDao: AchievementStatusDao,
         usersDao: UsersDao,
+        playersDao: PlayersDao,
         steamSource: Source,
         syncExecutor: SyncExecutor
 ) {
@@ -29,7 +31,7 @@ class ApiServer(
     private val app: Javalin
 
     init {
-        val usersManager = UsersManager(usersDao)
+        val usersManager = UsersManager(usersDao, playersDao)
         val gamesManager = GamesManager(gamesDao, userGamesDao, achievementsDao, achievementStatusDao)
         val sourcesManager = SourcesManager(steamSource, gamesDao, achievementsDao, userGamesDao, achievementStatusDao)
         val authManager = AuthManager(authorizationDao, usersManager)
@@ -58,14 +60,15 @@ class ApiServer(
             val achievementsDao = AchievementsDao("cheetosbros-prod-Achievements-TZRR78IUS2KB", dynamoDb)
             val gameStatusDao = UserGamesDao("cheetosbros-prod-OwnedGames-2YKNB7H0KJRQ", dynamoDb)
             val userAchievementsDao = AchievementStatusDao("cheetosbros-prod-AchievementStatus-QZSUCSVQ0ZQH", dynamoDb)
-            val usersDao = UsersDao("cheetosbros-prod-Users-1IWF8EPSH6C4Y", dynamoDb)
+            val playersDao = PlayersDao("cheetosbros-prod-Players-VZB7N9XIRKZ8", dynamoDb)
+            val usersDao = UsersDao("cheetosbros-prod-Users-1IWF8EPSH6C4Y", dynamoDb, playersDao)
             val authorizationDao = JwtAuthorizationDao(
                     issuer = "cheetosbros-dev",
                     privateKey = PemUtils.parsePEMFile(Paths.get("C:/Users/ohara/Desktop/cheetosbros-dev.pem").toUri().toURL())!!,
                     publicKey = PemUtils.parsePEMFile(Paths.get("C:/Users/ohara/Desktop/cheetosbros-dev-pub.pem").toUri().toURL())!!
             )
 
-            val server = ApiServer(authorizationDao, gamesDao, achievementsDao, gameStatusDao, userAchievementsDao, usersDao, steamSource, syncExecutor)
+            val server = ApiServer(authorizationDao, gamesDao, achievementsDao, gameStatusDao, userAchievementsDao, usersDao, playersDao, steamSource, syncExecutor)
             server.app.start(8000)
         }
     }
