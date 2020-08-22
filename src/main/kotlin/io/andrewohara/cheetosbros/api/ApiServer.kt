@@ -54,11 +54,11 @@ class ApiServer(
             val dynamoDb = AmazonDynamoDBClientBuilder.defaultClient()
 
             val syncExecutor = ThreadPoolSyncExecutor()
-            val gamesDao = GamesDao("cheetosbros-games-dev", dynamoDb)
-            val achievementsDao = AchievementsDao("cheetosbros-achievements-dev", dynamoDb)
-            val gameStatusDao = UserGamesDao("cheetosbros-gamestatus-dev", dynamoDb)
-            val userAchievementsDao = AchievementStatusDao("cheetosbros-user-achievements-dev", dynamoDb)
-            val usersDao = UsersDao("cheetosbros-users-dev", dynamoDb)
+            val gamesDao = GamesDao("cheetosbros-prod-Games-H2CNV8YSZW3R", dynamoDb)
+            val achievementsDao = AchievementsDao("cheetosbros-prod-Achievements-TZRR78IUS2KB", dynamoDb)
+            val gameStatusDao = UserGamesDao("cheetosbros-prod-OwnedGames-2YKNB7H0KJRQ", dynamoDb)
+            val userAchievementsDao = AchievementStatusDao("cheetosbros-prod-AchievementStatus-QZSUCSVQ0ZQH", dynamoDb)
+            val usersDao = UsersDao("cheetosbros-prod-Users-1IWF8EPSH6C4Y", dynamoDb)
             val authorizationDao = JwtAuthorizationDao(
                     issuer = "cheetosbros-dev",
                     privateKey = PemUtils.parsePEMFile(Paths.get("C:/Users/ohara/Desktop/cheetosbros-dev.pem").toUri().toURL())!!,

@@ -2,7 +2,6 @@ package io.andrewohara.cheetosbros.api.users
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.sources.Game
 
@@ -18,7 +17,7 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
         val query = when (platform) {
             Game.Platform.Xbox -> DynamoDBQueryExpression<DynamoUser>()
                     .withIndexName("xuid")
-                    .withHashKeyValues(DynamoUser(xboxXuid = socialUserId))
+                    .withHashKeyValues(DynamoUser(xuid = socialUserId))
                     .withConsistentRead(false)
             Game.Platform.Steam -> DynamoDBQueryExpression<DynamoUser>()
                     .withIndexName("steamId64")
@@ -41,7 +40,7 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
             var displayName: String? = null,
 
             @DynamoDBIndexHashKey(globalSecondaryIndexName = "xuid")
-            var xboxXuid: String? = null,
+            var xuid: String? = null,
             var xboxGamertag: String? = null,
             var openxblToken: String? = null,
 
@@ -52,9 +51,9 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
         fun toItem() = User(
                 id = id!!,
                 displayName = displayName!!,
-                xbox = xboxXuid?.let {
+                xbox = xuid?.let {
                     SocialLink(
-                            id = xboxXuid!!,
+                            id = xuid!!,
                             platform = Game.Platform.Xbox,
                             username = xboxGamertag!!,
                             token = openxblToken!!
@@ -74,7 +73,7 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
                 id = user.id,
                 displayName = user.displayName,
 
-                xboxXuid = user.xbox?.id,
+                xuid = user.xbox?.id,
                 xboxGamertag = user.xbox?.username,
                 openxblToken = user.xbox?.token,
 

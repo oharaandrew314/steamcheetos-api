@@ -1,0 +1,84 @@
+Resources:
+  Users:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: xuid
+          AttributeType: S
+        - AttributeName: steamId64
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: xuid
+          KeySchema:
+            - AttributeName: xuid
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: steamId64
+          KeySchema:
+            - AttributeName: steamId64
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  Games:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uuid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uuid
+          KeyType: HASH
+
+  Achievements:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: gameUuid
+          AttributeType: S
+        - AttributeName: achievementId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: gameUuid
+          KeyType: HASH
+        - AttributeName: achievementId
+          KeyType: RANGE
+
+  OwnedGames:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: gameUuid
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: gameUuid
+          KeyType: RANGE
+
+  AchievementStatus:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userIdAndGameId
+          AttributeType: S
+        - AttributeName: achievementId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userIdAndGameId
+          KeyType: HASH
+        - AttributeName: achievementId
+          KeyType: RANGE
