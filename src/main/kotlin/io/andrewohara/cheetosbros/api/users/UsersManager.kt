@@ -1,51 +1,42 @@
 package io.andrewohara.cheetosbros.api.users
 
+import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
 import java.util.*
 
-class UsersManager(private val usersDao: UsersDao, private val playersDao: PlayersDao, private val friendsDao: FriendsDao) {
+class UsersManager(private val usersDao: UsersDao, private val playersDao: PlayersDao) {
 
     operator fun get(cheetosUserId: String): User? {
         return usersDao[cheetosUserId]
     }
 
     operator fun get(player: Player): User? {
-        return usersDao[player.platform, player.id]
+        val userId = playersDao.getUserId(player) ?: return null
+        return usersDao[userId]
     }
 
-    fun createUser(player: Player, token: String?): User {
-        val user = User(id = UUID.randomUUID().toString(), displayName = player.username)
-                .withPlayer(player, token)
+    fun createUser(displayName: String): User {
+        val user = User(id = UUID.randomUUID().toString(), displayName = displayName)
 
         usersDao.save(user)
-        playersDao.save(player)
 
         return user
     }
 
-    fun linkSocialLogin(user: User, player: Player, token: String?): User {
-        val updated = user.withPlayer(player, token)
-
-        usersDao.save(updated)
+    fun linkSocialLogin(user: User, player: Player, token: String?) {
+        when(player.platform) {
+            Platform.Xbox -> {
+                usersDao.save(user.copy(openxblToken = token))
+            }
+            Platform.Steam -> {}
+        }
         playersDao.save(player)
-
-        return updated
+        playersDao.linkUser(player, user)
     }
 
-    fun getFriends(user: User): Collection<Player> {
-        val friends = friendsDao[user]
-
-        val players = playersDao.batchGet(friends.map { it.uuid })
-                .map { it.uuid to it }
-                .toMap()
-
-        return friends.map { friend ->
-            players[friend.uuid] ?: Player(
-                    id = friend.id,
-                    platform = friend.platform,
-                    avatar = null,
-                    username = "Unknown Friend: ${friend.id}"
-            )
-        }
+    fun getFriends(user: User, platform: Platform? = null): Collection<Player>? {
+        return playersDao.listForUser(user)
+                .filter { platform == null || it.platform == platform }
+                .flatMap { playersDao.getFriends(it) ?: emptyList() }
     }
 }

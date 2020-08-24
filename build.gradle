@@ -44,6 +44,15 @@ dependencies {
 }
 
 jacocoTestCoverageVerification {
+     afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(
+                        dir: it,
+                        exclude: [
+                                'io/andrewohara/cheetosbros/sources/**'
+                        ])
+            }))
+        }
     violationRules {
         rule {
             limit {

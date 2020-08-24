@@ -46,7 +46,7 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
 
         val effectiveUser = when {
             linkedUser == null && loggedInUser == null -> {
-                usersManager.createUser(player, token)
+                usersManager.createUser(player.username)
             }
             linkedUser == null && loggedInUser != null -> {
                 loggedInUser
@@ -61,7 +61,7 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
             else -> throw IllegalStateException()
         }
 
-        usersManager.linkSocialLogin(effectiveUser, player, token)  // relinking will also update token
+        usersManager.linkSocialLogin(effectiveUser, player, token)  // re-linking will also update token
         createSession(ctx, effectiveUser)
     }
 

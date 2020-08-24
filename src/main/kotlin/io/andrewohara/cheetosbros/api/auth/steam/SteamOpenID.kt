@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.auth.steam
 
-import io.andrewohara.cheetosbros.sources.Game
+import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
 import io.andrewohara.cheetosbros.sources.Source
 import org.openid4java.consumer.ConsumerManager
@@ -46,7 +46,7 @@ class SteamOpenID(private val steamApi: Source) {
         val userProfile = steamApi.getPlayer(steamId64) ?: return null
 
         return Player(
-                platform = Game.Platform.Steam,
+                platform = Platform.Steam,
                 id = steamId64,
                 username = userProfile.username,
                 avatar = userProfile.avatar

@@ -2,7 +2,7 @@ package io.andrewohara.cheetosbros.sources
 
 import java.lang.IllegalArgumentException
 
-class FakeSource: Source {
+class FakeSource(override val platform: Platform): Source {
 
     private val players = mutableMapOf<String, Player>()
     private val games = mutableMapOf<String, Game>()
@@ -12,8 +12,8 @@ class FakeSource: Source {
     private val achievements = mutableMapOf<Game, MutableSet<Achievement>>()
     private val userAchievements = mutableMapOf<Pair<Game, Player>, MutableSet<AchievementStatus>>()
 
-    override fun getPlayer(id: String): Player? {
-        return players[id]
+    override fun getPlayer(playerId: String): Player? {
+        return players[playerId]
     }
 
     fun addPlayer(player: Player) {
@@ -22,16 +22,12 @@ class FakeSource: Source {
         friendIds[player] = mutableSetOf()
     }
 
-    override fun resolveUserId(username: String): String? {
-        TODO("Not yet implemented")
-    }
-
-    override fun games(userId: String): Collection<Game> {
-        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
+    override fun library(playerId: String): Collection<Game> {
+        val player = getPlayer(playerId) ?: throw IllegalArgumentException("Player $playerId does not exist")
         return userGames.getValue(player)
     }
 
-    private fun getGame(appId: String): Game {
+    private fun game(appId: String): Game {
         return games[appId] ?: throw IllegalArgumentException("Game $appId does not exist")
     }
 
@@ -40,40 +36,40 @@ class FakeSource: Source {
         achievements[game] = mutableSetOf()
     }
 
-    fun addGameToLibrary(userId: String, appId: String) {
-        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
-        val game = getGame(appId)
+    fun addGameToLibrary(playerId: String, appId: String) {
+        val player = getPlayer(playerId) ?: throw IllegalArgumentException("Player $playerId does not exist")
+        val game = game(appId)
 
         userGames.getValue(player).add(game)
         userAchievements[game to player] = mutableSetOf()
     }
 
-    override fun achievements(appId: String): Collection<Achievement> {
-        val game = getGame(appId)
+    override fun achievements(gameId: String): Collection<Achievement> {
+        val game = game(gameId)
         return achievements.getValue(game)
     }
 
     fun addAchievement(appId: String, achievement: Achievement) {
-        val game = getGame(appId)
+        val game = game(appId)
         achievements.getValue(game).add(achievement)
     }
 
-    override fun userAchievements(appId: String, userId: String): Collection<AchievementStatus> {
-        val game = getGame(appId)
-        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
+    override fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus> {
+        val game = game(gameId)
+        val player = getPlayer(playerId) ?: throw IllegalArgumentException("Player $playerId does not exist")
 
         return userAchievements.getValue(game to player)
     }
 
-    fun addUserAchievement(appId: String, userId: String, achievementStatus: AchievementStatus) {
-        val game = getGame(appId)
+    fun addUserAchievement(gameId: String, userId: String, achievementStatus: AchievementStatus) {
+        val game = game(gameId)
         val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
 
         userAchievements.getValue(game to player).add(achievementStatus)
     }
 
-    override fun getFriends(userId: String): Collection<String> {
-        val player = getPlayer(userId) ?: throw IllegalArgumentException("Player $userId does not exist")
+    override fun getFriends(playerId: String): Collection<String> {
+        val player = getPlayer(playerId) ?: throw IllegalArgumentException("Player $playerId does not exist")
         return friendIds.getValue(player).map { it.id }
     }
 

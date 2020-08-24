@@ -15,7 +15,7 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
 
     fun list(game: Game): Collection<Achievement> {
         val query = DynamoDBQueryExpression<DynamoAchievement>()
-                .withHashKeyValues(DynamoAchievement(gameUuid = game.uuid))
+                .withHashKeyValues(DynamoAchievement(gameUuid = uuid(game)))
 
         return mapper.query(query).map { it.toAchievement() }
     }
@@ -40,7 +40,7 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
             var score: Int? = null,
     ) {
         constructor(game: Game, achievement: Achievement): this(
-                gameUuid = game.uuid,
+                gameUuid = uuid(game),
                 achievementId = achievement.id,
                 name = achievement.name,
                 description = achievement.description,
@@ -57,5 +57,9 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
                 icons = icons,
                 score = score
         )
+    }
+
+    companion object {
+        private fun uuid(game: Game) = "${game.platform}-${game.id}"
     }
 }

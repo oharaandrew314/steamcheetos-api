@@ -23,10 +23,11 @@ class OpenXblSource(private val apiKey: String): Source {
     }
 
     private val client = HttpClient.newHttpClient()
+    override val platform = Platform.Xbox
 
-    override fun getPlayer(id: String): Player? {
+    override fun getPlayer(playerId: String): Player? {
         val request = HttpRequest.newBuilder()
-                .uri(URI.create("$host/account/$id"))
+                .uri(URI.create("$host/account/$playerId"))
                 .header("X-Authorization", apiKey)
                 .header("X-Contract", "100")
                 .GET()
@@ -44,40 +45,15 @@ class OpenXblSource(private val apiKey: String): Source {
 
         return Player(
                 id = profile.id,
-                platform = Game.Platform.Xbox,
+                platform = platform,
                 username = profile.getGamertag()!!,
                 avatar = profile.getAvatar()
         )
     }
 
-    override fun resolveUserId(username: String): String? {
+    override fun library(playerId: String): Collection<Game> {
         val request = HttpRequest.newBuilder()
-                .uri(URI.create("$host/friends/search?gt=$username"))
-                .header("X-Authorization", apiKey)
-                .header("X-Contract", "100")
-                .GET()
-                .build()
-
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() != 200) {
-            throw IllegalStateException("Request failed: $response")
-        }
-
-        if ("\"code\":28" in response.body()) {
-            return null
-        }
-
-        val user = mapper.readValue(response.body(), SearchFriendResponse::class.java)
-                .profileUsers
-                .firstOrNull { it.settings.any { setting -> setting.id == "Gamertag" && setting.value.equals(username, ignoreCase = true) } }
-                ?: return null
-
-        return user.id
-    }
-
-    override fun games(userId: String): Collection<Game> {
-        val request = HttpRequest.newBuilder()
-                .uri(URI.create("$host/achievements/player/$userId"))
+                .uri(URI.create("$host/achievements/player/$playerId"))
                 .header("X-Authorization", apiKey)
                 .header("X-Contract", "100")
                 .GET()
@@ -92,12 +68,17 @@ class OpenXblSource(private val apiKey: String): Source {
                 .titles
                 .filter { it.type == "Game" }
                 .filter { it.achievement.totalGamerscore > 0 }
-                .map { Game(id = it.titleId, name = it.name, platform = Game.Platform.Xbox, displayImage = it.displayImage, icon = null) }
+                .map {game -> Game(
+                        id = game.titleId,
+                        name = game.name,
+                        platform = platform,
+                        displayImage = game.displayImage
+                )}
     }
 
-    override fun achievements(appId: String): Collection<Achievement> {
+    override fun achievements(gameId: String): Collection<Achievement> {
         val request = HttpRequest.newBuilder()
-                .uri(URI.create("$host/achievements/title/$appId"))
+                .uri(URI.create("$host/achievements/title/$gameId"))
                 .header("X-Authorization", apiKey)
                 .header("X-Contract", "100")
                 .GET()
@@ -117,9 +98,9 @@ class OpenXblSource(private val apiKey: String): Source {
                 ) }
     }
 
-    override fun userAchievements(appId: String, userId: String): Collection<AchievementStatus> {
+    override fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus> {
         val request = HttpRequest.newBuilder()
-                .uri(URI.create("$host/achievements/player/$userId/title/$appId"))
+                .uri(URI.create("$host/achievements/player/$playerId/title/$gameId"))
                 .header("X-Authorization", apiKey)
                 .header("X-Contract", "100")
                 .GET()
@@ -138,7 +119,7 @@ class OpenXblSource(private val apiKey: String): Source {
                 ) }
     }
 
-    override fun getFriends(userId: String): Collection<String> {
+    override fun getFriends(playerId: String): Collection<String> {
         val request = HttpRequest.newBuilder()
                 .uri(URI.create("$host/friends"))
                 .header("X-Authorization", apiKey)

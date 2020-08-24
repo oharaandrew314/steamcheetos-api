@@ -3,25 +3,20 @@ package io.andrewohara.cheetosbros.sources
 import java.time.Instant
 
 data class Player(
+        val platform: Platform,
         val id: String,
-        val platform: Game.Platform,
         val username: String,
         val avatar: String?
-) {
-    val uuid = "$platform-$id"
-}
+)
 
 data class Game(
-        val id: String,
         val platform: Platform,
+        val id: String,
         val name: String,
-        val displayImage: String?,
-        val icon: String?
-) {
-    val uuid = "$platform-$id"
+        val displayImage: String?
+)
 
-    enum class Platform { Steam, Xbox }
-}
+enum class Platform { Steam, Xbox }
 
 data class Achievement(
         val id: String,
@@ -32,9 +27,9 @@ data class Achievement(
         val score: Int?
 )
 
-data class UserGame(
-        val gameUuid: String,
-        val lastPlayed: Instant?
+data class LibraryItem(
+        val platform: Platform,
+        val gameId: String
 )
 
 data class AchievementStatus(
@@ -45,10 +40,11 @@ data class AchievementStatus(
 }
 
 interface Source {
-    fun getPlayer(id: String): Player?
-    fun getFriends(userId: String): Collection<String>
-    fun resolveUserId(username: String): String?
-    fun games(userId: String): Collection<Game>
-    fun achievements(appId: String): Collection<Achievement>
-    fun userAchievements(appId: String, userId: String): Collection<AchievementStatus>
+    val platform: Platform
+
+    fun getPlayer(playerId: String): Player?
+    fun getFriends(playerId: String): Collection<String>
+    fun library(playerId: String): Collection<Game>
+    fun achievements(gameId: String): Collection<Achievement>
+    fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus>
 }

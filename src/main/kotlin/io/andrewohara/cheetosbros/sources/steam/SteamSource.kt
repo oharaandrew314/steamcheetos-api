@@ -20,11 +20,13 @@ class SteamSource(private val apiKey: String): Source {
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     }
 
+    override val platform = Platform.Steam
+
     private val client = HttpClient.newHttpClient()
 
-    override fun games(userId: String): Collection<Game> {
+    override fun library(playerId: String): Collection<Game> {
         val request = HttpRequest.newBuilder()
-                .uri("IPlayerService","GetOwnedGames", 1, steamId=userId.toLong(), params = mapOf("include_appinfo" to "1", "include_played_free_games" to "1"))
+                .uri("IPlayerService","GetOwnedGames", 1, steamId=playerId.toLong(), params = mapOf("include_appinfo" to "1", "include_played_free_games" to "1"))
                 .GET()
                 .build()
 
@@ -36,12 +38,17 @@ class SteamSource(private val apiKey: String): Source {
         return mapper.readValue(response.body(), GetOwnedGamesResponse::class.java)
                 .response
                 .games
-                .map { Game(id = it.appid.toString(), name = it.name, platform = Game.Platform.Steam, displayImage = it.img_logo_url, icon = it.img_icon_url) }
+                .map { game -> Game(
+                        id = game.appid.toString(),
+                        name = game.name,
+                        platform = platform,
+                        displayImage = "http://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_logo_url}.jpg"
+                )}
     }
 
-    override fun achievements(appId: String): Collection<Achievement> {
+    override fun achievements(gameId: String): Collection<Achievement> {
         val request = HttpRequest.newBuilder()
-                .uri("ISteamUserStats","GetSchemaForGame", 2, params = mapOf("appid" to appId))
+                .uri("ISteamUserStats","GetSchemaForGame", 2, params = mapOf("appid" to gameId))
                 .GET()
                 .build()
 
@@ -65,9 +72,9 @@ class SteamSource(private val apiKey: String): Source {
                 ?: emptySet()
     }
 
-    override fun userAchievements(appId: String, userId: String): Collection<AchievementStatus> {
+    override fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus> {
         val request = HttpRequest.newBuilder()
-                .uri("ISteamUserStats","GetPlayerAchievements", 1, steamId = userId.toLong(), params = mapOf("appid" to appId))
+                .uri("ISteamUserStats","GetPlayerAchievements", 1, steamId = playerId.toLong(), params = mapOf("appid" to gameId))
                 .GET()
                 .build()
 
@@ -84,25 +91,9 @@ class SteamSource(private val apiKey: String): Source {
                 ?: emptyList()
     }
 
-    override fun resolveUserId(username: String): String? {
+    override fun getPlayer(playerId: String): Player? {
         val request = HttpRequest.newBuilder()
-                .uri("ISteamUser","ResolveVanityURL", 1, params = mapOf("vanityurl" to username))
-                .GET()
-                .build()
-
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() != 200) {
-            throw IllegalStateException("Request failed: $response")
-        }
-
-        return mapper.readValue(response.body(), ResolveVanityURLResponse::class.java)
-                .response
-                .let { if (it.success == 1) it.steamid!! else null }
-    }
-
-    override fun getPlayer(id: String): Player? {
-        val request = HttpRequest.newBuilder()
-                .uri("ISteamUser","GetPlayerSummaries", 2, params = mapOf("steamids" to id))
+                .uri("ISteamUser","GetPlayerSummaries", 2, params = mapOf("steamids" to playerId))
                 .GET()
                 .build()
 
@@ -116,20 +107,20 @@ class SteamSource(private val apiKey: String): Source {
         return responseBody
                 .response
                 .players
-                .firstOrNull { it.steamid == id }
+                .firstOrNull { it.steamid == playerId }
                 ?.let {
                     Player(
                             id = it.steamid,
-                            platform = Game.Platform.Steam,
+                            platform = platform,
                             username = it.personaname,
                             avatar = it.avatarfull
                     )
                 }
     }
 
-    override fun getFriends(userId: String): Collection<String> {
+    override fun getFriends(playerId: String): Collection<String> {
         val request = HttpRequest.newBuilder()
-                .uri("ISteamUser","GetFriendList", 1, steamId = userId.toLong(), params = mapOf("relationship" to "friend"))
+                .uri("ISteamUser","GetFriendList", 1, steamId = playerId.toLong(), params = mapOf("relationship" to "friend"))
                 .GET()
                 .build()
 
