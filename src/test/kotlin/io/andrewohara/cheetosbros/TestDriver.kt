@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros
 
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
+import io.andrewohara.cheetosbros.api.CacheConfig
 import io.andrewohara.cheetosbros.api.auth.AuthorizationDao
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
 import io.andrewohara.cheetosbros.api.auth.PemUtils
@@ -15,6 +16,7 @@ import java.util.*
 
 class TestDriver: ExternalResource() {
 
+    // Daos
     private lateinit var playersDao: PlayersDao
     private lateinit var usersDao: UsersDao
     private lateinit var gamesDao: GamesDao
@@ -23,21 +25,33 @@ class TestDriver: ExternalResource() {
     private lateinit var achievementStatusDao: AchievementStatusDao
     lateinit var authorizationDao: AuthorizationDao
 
+    // Sources
     private lateinit var steamSource: FakeSource
     private lateinit var xboxSource: FakeSource
     private lateinit var sourceFactory: SourceFactory
 
+    // Managers
     lateinit var gamesManager: GamesManager
     lateinit var syncManager: SyncManager
     lateinit var usersManager: UsersManager
 
-    private val syncExecutor = InlineSyncExecutor()
-
+    // Test Helpers
     val sourceHelper = SourceHelper()
     val gamesHelper = GamesHelper()
 
+    // Config
+    lateinit var time: Instant
+    var cacheConfig = CacheConfig(
+            library = Duration.ofDays(1),
+            achievements = Duration.ofDays(30),
+            achievementStatuses = Duration.ofHours(1),
+            friends = Duration.ofDays(1)
+    )
+
     override fun before() {
         val dynamoDb = MockAmazonDynamoDB()
+
+        time = Instant.parse("2020-01-01T00:00:00Z")
 
         playersDao = PlayersDao("players", dynamoDb)
         playersDao.mapper.createTable(ProvisionedThroughput(1, 1))
@@ -68,9 +82,9 @@ class TestDriver: ExternalResource() {
         xboxSource = FakeSource(Platform.Xbox)
         sourceFactory = FakeSourceFactory(steamSource = steamSource, xboxSource = xboxSource)
 
-        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao)
-        syncManager = SyncManager(sourceFactory, syncExecutor, gamesDao, achievementsDao, gameLibraryDao, achievementStatusDao, playersDao)
-        usersManager = UsersManager(usersDao, playersDao)
+        syncManager = SyncManager(sourceFactory, gamesDao, achievementsDao, gameLibraryDao, achievementStatusDao, playersDao) { time }
+        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, syncManager, cacheConfig) { time }
+        usersManager = UsersManager(usersDao, playersDao, cacheConfig, syncManager) { time }
     }
 
     inner class SourceHelper {
@@ -156,10 +170,6 @@ class TestDriver: ExternalResource() {
         fun removeFriend(player: Player, friend: Player) {
             val source = player.platform.source()
             source.removeFriend(userId = player.id, friendId = friend.id)
-        }
-
-        fun sync(user: User) {
-            syncManager.sync(user)
         }
 
         private fun Platform.source() = when(this) {

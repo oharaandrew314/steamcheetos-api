@@ -3,6 +3,7 @@ package io.andrewohara.cheetosbros.sources.steam
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.andrewohara.cheetosbros.sources.*
+import java.io.IOException
 import java.lang.IllegalStateException
 import java.net.URI
 import java.net.http.HttpClient
@@ -98,8 +99,10 @@ class SteamSource(private val apiKey: String): Source {
                 .build()
 
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() != 200) {
-            throw IllegalStateException("Request failed: $response")
+        when (response.statusCode()) {
+            200 -> {}
+            403 -> throw SourceAccessDenied("Could not retrieve achievement for player $playerId.  Profile is not public")
+            else -> throw IOException("Request failed: $response")
         }
 
         val responseBody =  mapper.readValue(response.body(), GetPlayerSummariesResponse::class.java)

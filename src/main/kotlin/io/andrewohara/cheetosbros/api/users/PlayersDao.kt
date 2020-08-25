@@ -1,13 +1,12 @@
 package io.andrewohara.cheetosbros.api.users
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBIndexHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression
+import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
+import io.andrewohara.cheetosbros.lib.InstantConverter
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
+import java.time.Instant
 
 class PlayersDao(tableName: String, client: AmazonDynamoDB) {
 
@@ -40,7 +39,7 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
         mapper.save(item)
     }
 
-    fun batchGet(platform: Platform, ids: Collection<String>): Collection<Player> {
+    private fun batchGet(platform: Platform, ids: Collection<String>): Collection<Player> {
         val keys = ids.map { DynamoPlayer(uuid = uuid(platform, it)) }
         return mapper.batchLoad(keys).map { it.toPlayer() }
     }
@@ -68,6 +67,24 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
         mapper.save(item)
     }
 
+    fun getLibraryCacheDate(player: Player): Instant? {
+        return mapper.load(uuid(player))?.libraryCacheDate
+    }
+
+    fun updateLibraryCacheDate(player: Player, time: Instant) {
+        val item = mapper.load(uuid(player)) ?: return
+        mapper.save(item.copy(libraryCacheDate = time))
+    }
+
+    fun getFriendsCacheDate(player: Player): Instant? {
+        return mapper.load(uuid(player))?.friendsCacheDate
+    }
+
+    fun updateFriendsCacheDate(player: Player, time: Instant) {
+        val item = mapper.load(uuid(player)) ?: return
+        mapper.save(item.copy(friendsCacheDate = time))
+    }
+
     @DynamoDBDocument
     data class DynamoPlayer(
             @DynamoDBHashKey
@@ -81,7 +98,13 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
             var username: String? = null,
             var avatar: String? = null,
 
-            var friendIds: List<String> = emptyList()
+            var friendIds: List<String> = emptyList(),
+
+            @DynamoDBTypeConverted(converter = InstantConverter::class)
+            var libraryCacheDate: Instant? = null,
+
+            @DynamoDBTypeConverted(converter = InstantConverter::class)
+            var friendsCacheDate: Instant? = null
     ) {
         constructor(player: Player): this(
             uuid = "${player.platform}-${player.id}",

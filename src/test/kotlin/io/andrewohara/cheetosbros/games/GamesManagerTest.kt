@@ -70,12 +70,12 @@ class GamesManagerTest {
 
     @Test
     fun `list achievements for missing game`() {
-        assertThat(testObj.listAchievements(Platform.Steam, "missingGame")).isNull()
+        assertThat(testObj.listAchievements(user, Platform.Steam, "missingGame")).isNull()
     }
 
     @Test
     fun `list achievements`() {
-        assertThat(testObj.listAchievements(me3.platform, me3.id)).containsExactly(*me3Achievements)
+        assertThat(testObj.listAchievements(user, me3.platform, me3.id)).containsExactly(*me3Achievements)
     }
 
     // list achievement status

@@ -3,8 +3,10 @@ package io.andrewohara.cheetosbros.api.games.v1
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
+import io.andrewohara.cheetosbros.lib.InstantConverter
 import io.andrewohara.cheetosbros.sources.Game
 import io.andrewohara.cheetosbros.sources.Platform
+import java.time.Instant
 
 class GamesDao(tableName: String, client: AmazonDynamoDB) {
 
@@ -25,9 +27,20 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
     }
 
     fun batchGet(platform: Platform, ids: Collection<String>): Collection<Game> {
-        val items = ids.map { DynamoGame(uuid = uuid(platform, it)) }
-        return mapper.batchLoad(items).map { it.toGame() }
+        val query = ids.map { DynamoGame(uuid = uuid(platform, it)) }
+        return mapper.batchLoad(query).map { it.toGame() }
     }
+
+    fun getAchievementsCacheDate(game: Game): Instant? {
+        val item = mapper.load(uuid(game.platform, game.id)) ?: return null
+        return item.achievementsCacheDate
+    }
+
+    fun updateAchievementsCacheDate(game: Game, time: Instant) {
+        val item = mapper.load(uuid(game.platform, game.id)) ?: return
+        mapper.save(item.copy(achievementsCacheDate =  time))
+    }
+
 
     @DynamoDBDocument
     data class DynamoGame(
@@ -37,7 +50,10 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
             var id: String? = null,
             var platform: String? = null,
             var name: String? = null,
-            var displayImage: String? = null
+            var displayImage: String? = null,
+
+            @DynamoDBTypeConverted(converter = InstantConverter::class)
+            var achievementsCacheDate: Instant? = null
     ) {
         constructor(game: Game) : this(
                 uuid = uuid(game.platform, game.id),

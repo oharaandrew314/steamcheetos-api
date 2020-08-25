@@ -4,6 +4,9 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTableMapper
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConverter
+import io.andrewohara.cheetosbros.sources.Platform
+import java.time.Instant
 
 object DynamoUtils {
 
@@ -14,4 +17,14 @@ object DynamoUtils {
 
         return DynamoDBMapper(client, config).newTableMapper(T::class.java)
     }
+}
+
+class InstantConverter: DynamoDBTypeConverter<String, Instant> {
+    override fun convert(instance: Instant)= instance.toString()
+    override fun unconvert(serialized: String): Instant = Instant.parse(serialized)
+}
+
+class PlatformConverter: DynamoDBTypeConverter<String, Platform> {
+    override fun convert(instance: Platform) = instance.toString()
+    override fun unconvert(serialized: String): Platform = Platform.valueOf(serialized)
 }

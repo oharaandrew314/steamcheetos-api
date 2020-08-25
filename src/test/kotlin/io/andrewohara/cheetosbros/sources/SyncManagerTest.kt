@@ -13,7 +13,7 @@ class SyncManagerTest {
     private val sourceHelper = driver.sourceHelper
 
     @Test
-    fun `sync games across single platform`() {
+    fun `sync library across single platform`() {
         val player = sourceHelper.createPlayer()
 
         val game1 = sourceHelper.createGame()
@@ -25,7 +25,7 @@ class SyncManagerTest {
         sourceHelper.createGame()
 
         val user = sourceHelper.createUser("user1", player)
-        driver.syncManager.sync(user)
+        driver.syncManager.syncLibrary(user, player)
 
         assertThat(driver.gamesManager.listGames(user)).containsExactlyInAnyOrder(game1, game2)
     }
@@ -41,7 +41,7 @@ class SyncManagerTest {
         val status1 = sourceHelper.unlockAchievement(player, game, cheeto1, Instant.ofEpochSecond(1000))
 
         val user = sourceHelper.createUser("user1", player)
-        sourceHelper.sync(user)
+        driver.syncManager .sync(user)
 
         assertThat(driver.gamesManager.listGames(user)).containsExactly(game)
         assertThat(driver.gamesManager.listAchievementStatus(user, playerId = player.id, gameId = game.id)).containsExactlyInAnyOrder(

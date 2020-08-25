@@ -12,6 +12,8 @@ import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil
 import io.javalin.core.validation.JavalinValidation
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.Instant
 
 class ApiServer(
         authorizationDao: AuthorizationDao,
@@ -23,15 +25,16 @@ class ApiServer(
         playersDao: PlayersDao,
         sourceFactory: SourceFactory,
         steamSource: Source,
-        syncExecutor: SyncExecutor
+        cacheConfig: CacheConfig,
+        time: () -> Instant
 ) {
 
     private val app: Javalin
 
     init {
-        val usersManager = UsersManager(usersDao, playersDao)
-        val gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao)
-        val syncManager = SyncManager(sourceFactory, syncExecutor, gamesDao, achievementsDao, gameLibraryDao, achievementStatusDao, playersDao)
+        val syncManager = SyncManager(sourceFactory, gamesDao, achievementsDao, gameLibraryDao, achievementStatusDao, playersDao, time)
+        val usersManager = UsersManager(usersDao, playersDao, cacheConfig, syncManager, time)
+        val gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, syncManager, cacheConfig, time)
         val authManager = AuthManager(authorizationDao, usersManager)
 
         app = Javalin.create {
@@ -45,7 +48,7 @@ class ApiServer(
 
         SteamAuthController(steamSource, authManager).register(app)
         OpenXblAuthController(System.getenv("OPENXBL_PUBLIC_APP_KEY"), authManager).register(app)
-        GamesControllerV1(gamesManager, syncManager).register(app)
+        GamesControllerV1(gamesManager).register(app)
         UsersControllerV1(app, usersManager)
     }
 
@@ -57,7 +60,6 @@ class ApiServer(
             val sourceFactory = SourceFactoryImpl(steamKey)
             val dynamoDb = AmazonDynamoDBClientBuilder.defaultClient()
 
-            val syncExecutor = ThreadPoolSyncExecutor()
             val gamesDao = GamesDao("cheetosbros-prod-Games-H2CNV8YSZW3R", dynamoDb)
             val achievementsDao = AchievementsDao("cheetosbros-prod-Achievements-TZRR78IUS2KB", dynamoDb)
             val gameLibraryDao = GameLibraryDao("cheetosbros-prod-GameLibrary-13FP09QLVHHLX", dynamoDb)
@@ -71,10 +73,18 @@ class ApiServer(
                     playersDao = playersDao
             )
 
+            val cacheConfig = CacheConfig(
+                    library = Duration.ofDays(1),
+                    achievements = Duration.ofDays(30),
+                    achievementStatuses = Duration.ofHours(1),
+                    friends = Duration.ofDays(1)
+            )
+
+            val time = { Instant.now() }
 
             val server = ApiServer(
                     authorizationDao, gamesDao, achievementsDao, gameLibraryDao, userAchievementsDao, usersDao,
-                    playersDao, sourceFactory, steamSource, syncExecutor
+                    playersDao, sourceFactory, steamSource, cacheConfig, time
             )
             server.app.start(8000)
         }

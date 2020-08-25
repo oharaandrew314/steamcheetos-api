@@ -1,10 +1,20 @@
 package io.andrewohara.cheetosbros.api.users
 
+import io.andrewohara.cheetosbros.api.CacheConfig
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
+import io.andrewohara.cheetosbros.sources.SyncManager
+import java.time.Duration
+import java.time.Instant
 import java.util.*
 
-class UsersManager(private val usersDao: UsersDao, private val playersDao: PlayersDao) {
+class UsersManager(
+        private val usersDao: UsersDao,
+        private val playersDao: PlayersDao,
+        private val cacheConfig: CacheConfig,
+        private val syncManager: SyncManager,
+        private val time: () -> Instant
+) {
 
     operator fun get(cheetosUserId: String): User? {
         return usersDao[cheetosUserId]
@@ -23,6 +33,11 @@ class UsersManager(private val usersDao: UsersDao, private val playersDao: Playe
         return user
     }
 
+    fun getPlayer(user: User, platform: Platform): Player? {
+        return playersDao.listForUser(user)
+                .firstOrNull { it.platform == platform }
+    }
+
     fun linkSocialLogin(user: User, player: Player, token: String?) {
         when(player.platform) {
             Platform.Xbox -> {
@@ -37,6 +52,16 @@ class UsersManager(private val usersDao: UsersDao, private val playersDao: Playe
     fun getFriends(user: User, platform: Platform? = null): Collection<Player>? {
         return playersDao.listForUser(user)
                 .filter { platform == null || it.platform == platform }
-                .flatMap { playersDao.getFriends(it) ?: emptyList() }
+                .flatMap { getFriends(user, it) }
+    }
+
+    private fun getFriends(user: User, player: Player): Collection<Player> {
+        val cacheDate = playersDao.getFriendsCacheDate(player)
+
+        if (cacheDate == null || Duration.between(cacheDate, time()) > cacheConfig.friends) {
+            syncManager.syncFriends(user, player)
+        }
+
+        return playersDao.getFriends(player) ?: emptyList()
     }
 }

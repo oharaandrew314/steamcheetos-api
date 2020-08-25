@@ -1,10 +1,7 @@
 package io.andrewohara.cheetosbros.api.games.v1
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey
+import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.sources.Achievement
 import io.andrewohara.cheetosbros.sources.Game
@@ -18,6 +15,13 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
                 .withHashKeyValues(DynamoAchievement(gameUuid = uuid(game)))
 
         return mapper.query(query).map { it.toAchievement() }
+    }
+
+    fun countAchievements(game: Game): Int {
+        val query = DynamoDBQueryExpression<DynamoAchievement>()
+                .withHashKeyValues(DynamoAchievement(gameUuid = uuid(game)))
+
+        return mapper.count(query)
     }
 
     fun batchSave(game: Game, achievements: Collection<Achievement>) {

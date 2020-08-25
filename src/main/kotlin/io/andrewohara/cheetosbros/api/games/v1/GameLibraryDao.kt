@@ -4,6 +4,9 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.DynamoUtils
+import io.andrewohara.cheetosbros.lib.InstantConverter
+import io.andrewohara.cheetosbros.lib.PlatformConverter
+import io.andrewohara.cheetosbros.sources.Game
 import io.andrewohara.cheetosbros.sources.Player
 import io.andrewohara.cheetosbros.sources.LibraryItem
 import io.andrewohara.cheetosbros.sources.Platform
@@ -27,14 +30,21 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
         return mapper.load(user.id, gameUuid)?.toGameStatus()
     }
 
-//    fun save(player: Player, status: LibraryItem) {
-//        val item = DynamoLibraryItem(player, status)
-//        mapper.save(item)
-//    }
-
     fun batchSave(player: Player, libraryItems: Collection<LibraryItem>) {
-        val items = libraryItems.map { DynamoLibraryItem(player, it) }
-        mapper.batchSave(items)
+        val existingGameIds = mapper.batchLoad(libraryItems.map { DynamoLibraryItem(player, it) }).map { it.gameId }
+
+        val toSave = libraryItems.filter { it.gameId !in existingGameIds }.map { DynamoLibraryItem(player, it) }
+        mapper.batchSave(toSave)
+    }
+
+    fun getAchievementStatusCacheDate(player: Player, game: Game): Instant? {
+        val item = mapper.load(uuid(player), game.id) ?: return null
+        return item.achievementStatusCacheDate
+    }
+
+    fun updateAchievementStatusCacheDate(player: Player, game: Game, time: Instant) {
+        val item = mapper.load(uuid(player), game.id) ?: return
+        mapper.save(item.copy(achievementStatusCacheDate = time))
     }
 
     @DynamoDBDocument
@@ -45,18 +55,19 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
             @DynamoDBRangeKey
             var gameId: String? = null,
 
-            var platform: String? = null
+            @DynamoDBTypeConverted(converter = PlatformConverter::class)
+            var platform: Platform? = null,
+
+            @DynamoDBTypeConverted(converter = InstantConverter::class)
+            var achievementStatusCacheDate: Instant? = null
     ) {
         constructor(player: Player, status: LibraryItem): this(
                 playerUuid = "${player.platform}-${player.id}",
                 gameId = status.gameId,
-                platform = player.platform.toString(),
+                platform = player.platform,
         )
 
-        fun toGameStatus() = LibraryItem(
-                platform = Platform.valueOf(platform!!),
-                gameId = gameId!!
-        )
+        fun toGameStatus() = LibraryItem(platform = platform!!, gameId = gameId!!)
     }
 
     companion object {

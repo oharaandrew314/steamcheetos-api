@@ -1,5 +1,6 @@
 package io.andrewohara.cheetosbros.sources
 
+import java.lang.Exception
 import java.time.Instant
 
 data class Player(
@@ -48,3 +49,5 @@ interface Source {
     fun achievements(gameId: String): Collection<Achievement>
     fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus>
 }
+
+class SourceAccessDenied(message: String): Exception(message)
