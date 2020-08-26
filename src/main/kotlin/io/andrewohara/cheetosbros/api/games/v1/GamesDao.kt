@@ -3,18 +3,17 @@ package io.andrewohara.cheetosbros.api.games.v1
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
-import io.andrewohara.cheetosbros.lib.InstantConverter
+import io.andrewohara.cheetosbros.lib.PlatformConverter
 import io.andrewohara.cheetosbros.sources.Game
 import io.andrewohara.cheetosbros.sources.Platform
-import java.time.Instant
+import java.time.Duration
 
 class GamesDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoGame, String, Void>(tableName, client)
 
     fun save(game: Game) {
-        val item = DynamoGame(game)
-        mapper.save(item)
+        mapper.save(DynamoGame(game))
     }
 
     fun batchSave(games: Collection<Game>) {
@@ -31,16 +30,6 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
         return mapper.batchLoad(query).map { it.toGame() }
     }
 
-    fun getAchievementsCacheDate(game: Game): Instant? {
-        val item = mapper.load(uuid(game.platform, game.id)) ?: return null
-        return item.achievementsCacheDate
-    }
-
-    fun updateAchievementsCacheDate(game: Game, time: Instant) {
-        val item = mapper.load(uuid(game.platform, game.id)) ?: return
-        mapper.save(item.copy(achievementsCacheDate =  time))
-    }
-
 
     @DynamoDBDocument
     data class DynamoGame(
@@ -48,24 +37,21 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
             var uuid: String? = null,
 
             var id: String? = null,
-            var platform: String? = null,
+            @DynamoDBTypeConverted(converter = PlatformConverter::class) var platform: Platform? = null,
             var name: String? = null,
-            var displayImage: String? = null,
-
-            @DynamoDBTypeConverted(converter = InstantConverter::class)
-            var achievementsCacheDate: Instant? = null
+            var displayImage: String? = null
     ) {
         constructor(game: Game) : this(
                 uuid = uuid(game.platform, game.id),
                 id = game.id,
-                platform = game.platform.toString(),
+                platform = game.platform,
                 name = game.name,
                 displayImage = game.displayImage
         )
 
         fun toGame() = Game(
                 id = id!!,
-                platform = Platform.valueOf(platform!!),
+                platform = platform!!,
                 name = name!!,
                 displayImage = displayImage
         )

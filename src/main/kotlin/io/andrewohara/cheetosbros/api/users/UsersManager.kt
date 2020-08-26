@@ -1,10 +1,10 @@
 package io.andrewohara.cheetosbros.api.users
 
 import io.andrewohara.cheetosbros.api.CacheConfig
+import io.andrewohara.cheetosbros.sources.CacheDao
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
-import io.andrewohara.cheetosbros.sources.SyncManager
-import java.time.Duration
+import io.andrewohara.cheetosbros.sources.SourceManager
 import java.time.Instant
 import java.util.*
 
@@ -12,7 +12,8 @@ class UsersManager(
         private val usersDao: UsersDao,
         private val playersDao: PlayersDao,
         private val cacheConfig: CacheConfig,
-        private val syncManager: SyncManager,
+        private val sourceManager: SourceManager,
+        private val cacheDao: CacheDao,
         private val time: () -> Instant
 ) {
 
@@ -56,10 +57,10 @@ class UsersManager(
     }
 
     private fun getFriends(user: User, player: Player): Collection<Player> {
-        val cacheDate = playersDao.getFriendsCacheDate(player)
-
-        if (cacheDate == null || Duration.between(cacheDate, time()) > cacheConfig.friends) {
-            syncManager.syncFriends(user, player)
+        if (cacheDao.isFriendsCacheExpired(player)) {
+            val friendIds = sourceManager.getFriends(user, player)
+            playersDao.saveFriends(player, friendIds)
+            cacheDao.updateFriendsCache(player, time() + cacheConfig.friends)
         }
 
         return playersDao.getFriends(player) ?: emptyList()

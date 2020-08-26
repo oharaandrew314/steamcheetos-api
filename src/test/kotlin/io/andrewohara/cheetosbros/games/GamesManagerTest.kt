@@ -14,8 +14,6 @@ class GamesManagerTest {
 
     @Rule @JvmField val driver = TestDriver()
 
-    private val helper = driver.gamesHelper
-
     private lateinit var testObj: GamesManager
 
     private lateinit var me3: Game
@@ -31,26 +29,26 @@ class GamesManagerTest {
     fun setup() {
         testObj = driver.gamesManager
 
-        steamPlayer = helper.createPlayer(Platform.Steam)
-        xboxPLayer = helper.createPlayer(Platform.Xbox)
+        steamPlayer = driver.createPlayer(Platform.Steam)
+        xboxPLayer = driver.createPlayer(Platform.Xbox)
 
-        me3 = helper.createGame(Platform.Xbox, "Mass Effect 3")
-        helper.addToLibrary(xboxPLayer, me3)
+        me3 = driver.createGame(Platform.Xbox, "Mass Effect 3")
+        driver.addToLibrary(xboxPLayer, me3)
         me3Achievements = arrayOf(
-            helper.createAchievement(me3, name = "It's a blue alien babe!", description = "Recruit Liara"),
-            helper.createAchievement(me3, name = "The Dinosaurs are extinct", description = "Headbutt a Krogan"),
-            helper.createAchievement(me3, name = "Did we win?", description = "Choose the colour of your ending")
+                driver.createAchievement(me3, name = "It's a blue alien babe!", description = "Recruit Liara"),
+                driver.createAchievement(me3, name = "The Dinosaurs are extinct", description = "Headbutt a Krogan"),
+                driver.createAchievement(me3, name = "Did we win?", description = "Choose the colour of your ending")
         )
 
-        satisfactory = helper.createGame(platform = Platform.Steam, name = "Satisfactory")
-        helper.addToLibrary(steamPlayer, satisfactory)
+        satisfactory = driver.createGame(platform = Platform.Steam, name = "Satisfactory")
+        driver.addToLibrary(steamPlayer, satisfactory)
         satisfactoryAchievements = arrayOf(
-            helper.createAchievement(satisfactory, name = "Choo!", description = "Build a train locomotive"),
-            helper.createAchievement(satisfactory, name = "3.6 Roentgen", description = "Detonate a nobelisk on a nuclear power plant"),
-            helper.createAchievement(satisfactory, name = "You are feeling very sleepy", description = "Collect a Mercer Sphere")
+                driver.createAchievement(satisfactory, name = "Choo!", description = "Build a train locomotive"),
+                driver.createAchievement(satisfactory, name = "3.6 Roentgen", description = "Detonate a nobelisk on a nuclear power plant"),
+                driver.createAchievement(satisfactory, name = "You are feeling very sleepy", description = "Collect a Mercer Sphere")
         )
 
-        user = helper.createUser(displayName = "xxNoobSlayerxx", steamPlayer, xboxPLayer)
+        user = driver.createUser(displayName = "xxNoobSlayerxx", steamPlayer, xboxPLayer)
     }
 
     // list games
@@ -87,8 +85,8 @@ class GamesManagerTest {
 
     @Test
     fun `list your achievement status`() {
-        helper.unlock(steamPlayer, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
-        helper.unlock(steamPlayer, satisfactory, satisfactoryAchievements[1], Instant.ofEpochSecond(50000))
+        driver.unlockAchievement(steamPlayer, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
+        driver.unlockAchievement(steamPlayer, satisfactory, satisfactoryAchievements[1], Instant.ofEpochSecond(50000))
 
         val expected = arrayOf(
                 AchievementStatus(achievementId = satisfactoryAchievements[0].id, unlockedOn = Instant.ofEpochSecond(9001)),
@@ -101,11 +99,12 @@ class GamesManagerTest {
 
     @Test
     fun `list achievement status for friend`() {
-        val friend = helper.createPlayer(Platform.Steam)
-        helper.addFriend(steamPlayer, friend)
+        val friend = driver.createPlayer(Platform.Steam)
+        driver.addFriend(steamPlayer, friend)
+        driver.addToLibrary(friend, satisfactory)
 
-        helper.unlock(friend, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
-        helper.unlock(friend, satisfactory, satisfactoryAchievements[2], Instant.ofEpochSecond(50000))
+        driver.unlockAchievement(friend, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
+        driver.unlockAchievement(friend, satisfactory, satisfactoryAchievements[2], Instant.ofEpochSecond(50000))
 
         val expected = arrayOf(
                 AchievementStatus(achievementId = satisfactoryAchievements[0].id, unlockedOn = Instant.ofEpochSecond(9001)),
@@ -118,11 +117,11 @@ class GamesManagerTest {
 
     @Test
     fun `list achievement status for non-friend`() {
-        val rando = helper.createPlayer(Platform.Steam)
-        helper.addToLibrary(rando, satisfactory)
+        val rando = driver.createPlayer(Platform.Steam)
+        driver.addToLibrary(rando, satisfactory)
 
-        helper.unlock(rando, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
-        helper.unlock(rando, satisfactory, satisfactoryAchievements[2], Instant.ofEpochSecond(50000))
+        driver.unlockAchievement(rando, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
+        driver.unlockAchievement(rando, satisfactory, satisfactoryAchievements[2], Instant.ofEpochSecond(50000))
 
         assertThat(testObj.listAchievementStatus(user, playerId = rando.id, gameId = satisfactory.id)).isNull()
     }

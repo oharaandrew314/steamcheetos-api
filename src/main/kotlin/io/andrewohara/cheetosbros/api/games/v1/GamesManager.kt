@@ -4,7 +4,6 @@ import io.andrewohara.cheetosbros.api.CacheConfig
 import io.andrewohara.cheetosbros.api.users.PlayersDao
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.sources.*
-import java.time.Duration
 import java.time.Instant
 
 class GamesManager(
@@ -13,8 +12,9 @@ class GamesManager(
         private val gameLibraryDao: GameLibraryDao,
         private val achievementsDao: AchievementsDao,
         private val achievementStatusDao: AchievementStatusDao,
-        private val syncManager: SyncManager,
+        private val sourceManager: SourceManager,
         private val cacheConfig: CacheConfig,
+        private val cacheDao: CacheDao,
         private val time: () -> Instant
 ) {
     fun listGames(user: User, platform: Platform? = null): Collection<Game> {
@@ -24,9 +24,12 @@ class GamesManager(
     }
 
     private fun listGames(user: User, player: Player): Collection<Game> {
-        val libraryCacheDate = playersDao.getLibraryCacheDate(player)
-        if (libraryCacheDate == null || Duration.between(libraryCacheDate, time()) > cacheConfig.library) {
-            syncManager.syncLibrary(user, player)
+        if (cacheDao.isLibraryCacheExpired(player)) {
+            val library = sourceManager.getLibrary(user, player)
+            gamesDao.batchSave(library)
+            gameLibraryDao.batchSave(player, library.map { LibraryItem(platform = it.platform, gameId = it.id) })
+            cacheDao.updateLibraryCache(player, time() + cacheConfig.library)
+            return library
         }
 
         val ids = gameLibraryDao.listGameIds(player)
@@ -36,9 +39,11 @@ class GamesManager(
     fun listAchievements(user: User, platform: Platform, gameId: String): Collection<Achievement>? {
         val game = gamesDao[platform, gameId] ?: return null
 
-        val achievementsCacheDate = gamesDao.getAchievementsCacheDate(game)
-        if (achievementsCacheDate == null || Duration.between(achievementsCacheDate, time()) > cacheConfig.achievements) {
-            syncManager.syncAchievements(user, game)
+        if (cacheDao.isAchievementsCacheExpired(game)) {
+            val achievements = sourceManager.getAchievements(user, game)
+            achievementsDao.batchSave(game, achievements)
+            cacheDao.updateAchievementsCache(game, time() + cacheConfig.achievements)
+            return achievements
         }
 
         return achievementsDao.list(game)
@@ -48,9 +53,11 @@ class GamesManager(
         val player = getAuthorizedPlayer(user, playerId) ?: return null
         val game = gamesDao[player.platform, gameId] ?: return null
 
-        val cacheDate = gameLibraryDao.getAchievementStatusCacheDate(player, game)
-        if (cacheDate == null || Duration.between(cacheDate, time()) > cacheConfig.achievementStatuses) {
-            syncManager.syncAchievementStatuses(user, game, player)
+        if (cacheDao.isAchievementStatusCacheExpired(game, player)) {
+            val achievementStatus = sourceManager.getAchievementStatus(user, game, player)
+            achievementStatusDao.batchSave(player, game, achievementStatus)
+            cacheDao.updateAchievementStatusCache(game, player, time() + cacheConfig.achievementStatuses)
+            return achievementStatus
         }
 
         return achievementStatusDao.list(player, game)

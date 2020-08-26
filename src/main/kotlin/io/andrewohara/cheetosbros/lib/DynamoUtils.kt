@@ -19,9 +19,9 @@ object DynamoUtils {
     }
 }
 
-class InstantConverter: DynamoDBTypeConverter<String, Instant> {
-    override fun convert(instance: Instant)= instance.toString()
-    override fun unconvert(serialized: String): Instant = Instant.parse(serialized)
+class EpochInstantConverter: DynamoDBTypeConverter<Long, Instant> {
+    override fun convert(instance: Instant)= instance.epochSecond
+    override fun unconvert(serialized: Long): Instant = Instant.ofEpochSecond(serialized)
 }
 
 class PlatformConverter: DynamoDBTypeConverter<String, Platform> {

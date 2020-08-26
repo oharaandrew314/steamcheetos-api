@@ -23,6 +23,7 @@ class TestDriver: ExternalResource() {
     private lateinit var achievementsDao: AchievementsDao
     private lateinit var gameLibraryDao: GameLibraryDao
     private lateinit var achievementStatusDao: AchievementStatusDao
+    private lateinit var cacheDao: CacheDao
     lateinit var authorizationDao: AuthorizationDao
 
     // Sources
@@ -32,15 +33,11 @@ class TestDriver: ExternalResource() {
 
     // Managers
     lateinit var gamesManager: GamesManager
-    lateinit var syncManager: SyncManager
+    lateinit var sourceManager: SourceManager
     lateinit var usersManager: UsersManager
 
-    // Test Helpers
-    val sourceHelper = SourceHelper()
-    val gamesHelper = GamesHelper()
-
     // Config
-    lateinit var time: Instant
+    private lateinit var time: Instant
     var cacheConfig = CacheConfig(
             library = Duration.ofDays(1),
             achievements = Duration.ofDays(30),
@@ -71,6 +68,9 @@ class TestDriver: ExternalResource() {
         achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb)
         achievementStatusDao.mapper.createTable(ProvisionedThroughput(1, 1))
 
+        cacheDao = CacheDao("cache", dynamoDb)
+        cacheDao.mapper.createTable(ProvisionedThroughput(1, 1))
+
         authorizationDao = JwtAuthorizationDao(
                 issuer = "cheetosbros-test",
                 privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
@@ -82,164 +82,97 @@ class TestDriver: ExternalResource() {
         xboxSource = FakeSource(Platform.Xbox)
         sourceFactory = FakeSourceFactory(steamSource = steamSource, xboxSource = xboxSource)
 
-        syncManager = SyncManager(sourceFactory, gamesDao, achievementsDao, gameLibraryDao, achievementStatusDao, playersDao) { time }
-        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, syncManager, cacheConfig) { time }
-        usersManager = UsersManager(usersDao, playersDao, cacheConfig, syncManager) { time }
+        sourceManager = SourceManager(sourceFactory)
+        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, sourceManager, cacheConfig, cacheDao) { time }
+        usersManager = UsersManager(usersDao, playersDao, cacheConfig, sourceManager, cacheDao) { time }
     }
 
-    inner class SourceHelper {
-        fun createUser(displayName: String? = null, vararg players: Player): User {
-            val id = UUID.randomUUID().toString()
-            val user = User(
-                    id = id,
-                    displayName = displayName ?: "user-$id",
-                    openxblToken = if (players.any { it.platform == Platform.Xbox }) "token" else null
-            )
-            usersDao.save(user)
-            for (player in players) {
-                playersDao.linkUser(player, user)
-            }
-
-            return user
-        }
-
-        fun createPlayer(platform: Platform = Platform.Steam, displayName: String? = null): Player {
-            val id = UUID.randomUUID().toString()
-            val player = Player(
-                    id = id,
-                    avatar = null,
-                    platform = platform,
-                    username = displayName ?: "player-$id"
-            )
-            platform.source().addPlayer(player)
-            return player
-        }
-
-        fun createGame(platform: Platform = Platform.Steam, name: String? = null): Game {
-            val id = UUID.randomUUID().toString()
-            val game = Game(
-                    id = id,
-                    displayImage = null,
-                    name = name ?: "game-$id",
-                    platform = platform
-            )
-            platform.source().addGame(game)
-
-            return game
-        }
-
-        fun createAchievement(game: Game, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
-            val id = UUID.randomUUID().toString()
-            val actualName = name ?: "achievement-$id"
-            val achievement = Achievement(
-                    id = id,
-                    name = actualName,
-                    description = description ?: "description for $actualName",
-                    hidden = hidden,
-                    icons = emptyList(),
-                    score = score
-            )
-
-            game.platform.source().addAchievement(game.id, achievement)
-
-            return achievement
-        }
-
-        fun unlockAchievement(player: Player, game: Game, achievement: Achievement, unlocked: Instant?): AchievementStatus {
-            val status = AchievementStatus(
-                    achievementId = achievement.id,
-                    unlockedOn = unlocked
-            )
-
-            game.platform.source().addUserAchievement(game.id, player.id, status)
-
-            return status
-        }
-
-        fun addToLibrary(game: Game, player: Player) {
-            val source = player.platform.source()
-
-            source.addGameToLibrary(player.id, game.id)
-        }
-
-        fun addFriend(player: Player, friend: Player) {
-            val source = player.platform.source()
-            source.addFriend(userId = player.id, friendId = friend.id)
-        }
-
-        fun removeFriend(player: Player, friend: Player) {
-            val source = player.platform.source()
-            source.removeFriend(userId = player.id, friendId = friend.id)
-        }
-
-        private fun Platform.source() = when(this) {
-            Platform.Steam -> steamSource
-            Platform.Xbox -> xboxSource
-        }
+    fun createPlayer(platform: Platform, displayName: String? = null): Player {
+        val id = UUID.randomUUID().toString()
+        val player = Player(
+                id = id,
+                avatar = null,
+                platform = platform,
+                username = displayName ?: "player-$id"
+        )
+        platform.source().addPlayer(player)
+        return player
     }
 
-    inner class GamesHelper {
-        private var idCounter = 1
-        private var time: Instant = Instant.parse("2020-01-01T00:00:00Z")
+    fun createGame(platform: Platform, name: String? = null): Game {
+        val id = UUID.randomUUID().toString()
+        val game = Game(
+                id = id,
+                displayImage = null,
+                name = name ?: "game-$id",
+                platform = platform
+        )
+        platform.source().addGame(game)
 
-        private fun nextTime(): Instant {
-            val result = time
-            time += Duration.ofHours(1)
-            return result
-        }
+        return game
+    }
 
-        fun createPlayer(platform: Platform, username: String? = null, avatar: String? = null): Player {
-            val id = idCounter++.toString()
-            val player = Player(id = id, username = username ?: "user $id", platform = platform, avatar = avatar)
-            playersDao.save(player)
-            return player
-        }
+    fun createAchievement(game: Game, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
+        val id = UUID.randomUUID().toString()
+        val actualName = name ?: "achievement-$id"
+        val achievement = Achievement(
+                id = id,
+                name = actualName,
+                description = description ?: "description for $actualName",
+                hidden = hidden,
+                icons = emptyList(),
+                score = score
+        )
 
-        fun createGame(platform: Platform, name: String? = null, displayImage: String? = null): Game {
-            val id = idCounter++.toString()
-            val game = Game(platform = platform, id = id, name = name ?: "game $id", displayImage = displayImage)
-            gamesDao.save(game)
+        game.platform.source().addAchievement(game.id, achievement)
 
-            return game
-        }
+        return achievement
+    }
 
-        fun createAchievement(game: Game, name: String? = null, description: String? = null, score: Int? = null, hidden: Boolean = false, icons: List<String> = emptyList()): Achievement {
-            val id = idCounter++.toString()
-            val achievement = Achievement(id = id, name = name ?: "Achievement $id", description = description, hidden = hidden , score = score, icons = icons)
-            achievementsDao.batchSave(game, listOf(achievement))
+    fun unlockAchievement(player: Player, game: Game, achievement: Achievement, unlocked: Instant?): AchievementStatus {
+        val status = AchievementStatus(
+                achievementId = achievement.id,
+                unlockedOn = unlocked
+        )
 
-            return achievement
-        }
+        game.platform.source().addUserAchievement(game.id, player.id, status)
 
-        fun unlock(player: Player, game: Game, achievement: Achievement, date: Instant? = null): AchievementStatus {
-            val status = AchievementStatus(achievementId = achievement.id, unlockedOn = date ?: nextTime())
-            achievementStatusDao.batchSave(player, game, listOf(status))
+        return status
+    }
 
-            return status
-        }
+    fun addToLibrary(player: Player, game: Game) {
+        val source = player.platform.source()
 
-        fun addToLibrary(player: Player, game: Game): LibraryItem {
-            val item = LibraryItem(platform = game.platform, gameId = game.id)
-            gameLibraryDao.batchSave(player, listOf(item))
+        source.addGameToLibrary(player.id, game.id)
+    }
 
-            return item
-        }
+    fun addFriend(player: Player, friend: Player) {
+        val source = player.platform.source()
+        source.addFriend(userId = player.id, friendId = friend.id)
+    }
 
-        fun createUser(displayName: String? = null, vararg players: Player): User {
-            val id = idCounter++.toString()
-            val user = User(id = id, displayName = displayName ?: "user $id")
-            usersDao.save(user)
+    fun removeFriend(player: Player, friend: Player) {
+        val source = player.platform.source()
+        source.removeFriend(userId = player.id, friendId = friend.id)
+    }
 
-            for (player in players) {
-                playersDao.linkUser(player, user)
-            }
+    private fun Platform.source() = when(this) {
+        Platform.Steam -> steamSource
+        Platform.Xbox -> xboxSource
+    }
 
-            return user
-        }
+    fun createUser(displayName: String? = null, xbox: Player? = null, steam: Player? = null): User {
+        val id = UUID.randomUUID().toString()
+        val user = User(
+                id = id,
+                displayName = displayName ?: "user-$id",
+                openxblToken = if (xbox != null) "token" else null
+        )
+        usersDao.save(user)
 
-        fun addFriend(player: Player, friend: Player) {
-            val friends = playersDao.getFriends(player)?.toSet() ?: emptySet()
-            playersDao.saveFriends(player, friends.map { it.id } + friend.id)
-        }
+        if (xbox != null) playersDao.linkUser(xbox, user)
+        if (steam != null) playersDao.linkUser(steam, user)
+
+        return user
     }
 }

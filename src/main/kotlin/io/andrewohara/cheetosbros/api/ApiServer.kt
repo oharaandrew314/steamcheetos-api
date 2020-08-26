@@ -26,15 +26,16 @@ class ApiServer(
         sourceFactory: SourceFactory,
         steamSource: Source,
         cacheConfig: CacheConfig,
+        cacheDao: CacheDao,
         time: () -> Instant
 ) {
 
     private val app: Javalin
 
     init {
-        val syncManager = SyncManager(sourceFactory, gamesDao, achievementsDao, gameLibraryDao, achievementStatusDao, playersDao, time)
-        val usersManager = UsersManager(usersDao, playersDao, cacheConfig, syncManager, time)
-        val gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, syncManager, cacheConfig, time)
+        val syncManager = SourceManager(sourceFactory)
+        val usersManager = UsersManager(usersDao, playersDao, cacheConfig, syncManager, cacheDao, time)
+        val gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, syncManager, cacheConfig, cacheDao, time)
         val authManager = AuthManager(authorizationDao, usersManager)
 
         app = Javalin.create {
@@ -66,10 +67,11 @@ class ApiServer(
             val userAchievementsDao = AchievementStatusDao("cheetosbros-prod-AchievementStatus-CLHMN2Y6WWPK", dynamoDb)
             val playersDao = PlayersDao("cheetosbros-prod-Players-VZB7N9XIRKZ8", dynamoDb)
             val usersDao = UsersDao("cheetosbros-prod-Users-1IWF8EPSH6C4Y", dynamoDb)
+            val cacheDao = CacheDao("cheetosbros-prod-Cache-W59C2X4KRF09", dynamoDb)
             val authorizationDao = JwtAuthorizationDao(
                     issuer = "cheetosbros-dev",
-                    privateKey = PemUtils.parsePEMFile(Paths.get("C:/Users/ohara/Desktop/cheetosbros-dev.pem").toUri().toURL())!!,
-                    publicKey = PemUtils.parsePEMFile(Paths.get("C:/Users/ohara/Desktop/cheetosbros-dev-pub.pem").toUri().toURL())!!,
+                    privateKey = PemUtils.parsePEMFile(Paths.get("../cheetosbros-dev.pem").toUri().toURL())!!,
+                    publicKey = PemUtils.parsePEMFile(Paths.get("../cheetosbros-dev-pub.pem").toUri().toURL())!!,
                     playersDao = playersDao
             )
 
@@ -84,7 +86,7 @@ class ApiServer(
 
             val server = ApiServer(
                     authorizationDao, gamesDao, achievementsDao, gameLibraryDao, userAchievementsDao, usersDao,
-                    playersDao, sourceFactory, steamSource, cacheConfig, time
+                    playersDao, sourceFactory, steamSource, cacheConfig, cacheDao, time
             )
             server.app.start(8000)
         }

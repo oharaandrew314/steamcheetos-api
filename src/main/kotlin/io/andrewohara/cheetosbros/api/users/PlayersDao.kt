@@ -3,22 +3,16 @@ package io.andrewohara.cheetosbros.api.users
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
-import io.andrewohara.cheetosbros.lib.InstantConverter
+import io.andrewohara.cheetosbros.lib.PlatformConverter
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
-import java.time.Instant
 
 class PlayersDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoPlayer, String, Void>(tableName, client)
 
     fun save(player: Player) {
-        val existing = mapper.load(uuid(player))
-
-        val item = existing?.copy(username = player.username, avatar = player.avatar)
-                ?: DynamoPlayer(player)
-
-        mapper.save(item)
+        mapper.save(DynamoPlayer(player))
     }
 
     fun listForUser(user: User): Collection<Player> {
@@ -67,24 +61,6 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
         mapper.save(item)
     }
 
-    fun getLibraryCacheDate(player: Player): Instant? {
-        return mapper.load(uuid(player))?.libraryCacheDate
-    }
-
-    fun updateLibraryCacheDate(player: Player, time: Instant) {
-        val item = mapper.load(uuid(player)) ?: return
-        mapper.save(item.copy(libraryCacheDate = time))
-    }
-
-    fun getFriendsCacheDate(player: Player): Instant? {
-        return mapper.load(uuid(player))?.friendsCacheDate
-    }
-
-    fun updateFriendsCacheDate(player: Player, time: Instant) {
-        val item = mapper.load(uuid(player)) ?: return
-        mapper.save(item.copy(friendsCacheDate = time))
-    }
-
     @DynamoDBDocument
     data class DynamoPlayer(
             @DynamoDBHashKey
@@ -94,29 +70,23 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
             var userId: String? = null,
 
             var id: String? = null,
-            var platform: String? = null,
+            @DynamoDBTypeConverted(converter = PlatformConverter::class) var platform: Platform? = null,
             var username: String? = null,
             var avatar: String? = null,
 
             var friendIds: List<String> = emptyList(),
-
-            @DynamoDBTypeConverted(converter = InstantConverter::class)
-            var libraryCacheDate: Instant? = null,
-
-            @DynamoDBTypeConverted(converter = InstantConverter::class)
-            var friendsCacheDate: Instant? = null
     ) {
         constructor(player: Player): this(
             uuid = "${player.platform}-${player.id}",
             id = player.id,
-            platform = player.platform.toString(),
+            platform = player.platform,
             username = player.username,
             avatar = player.avatar
         )
 
         fun toPlayer() = Player(
                 id = id!!,
-                platform = Platform.valueOf(platform!!),
+                platform = platform!!,
                 username = username!!,
                 avatar = avatar
         )

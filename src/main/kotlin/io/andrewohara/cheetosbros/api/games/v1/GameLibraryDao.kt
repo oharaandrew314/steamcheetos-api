@@ -4,13 +4,10 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.DynamoUtils
-import io.andrewohara.cheetosbros.lib.InstantConverter
 import io.andrewohara.cheetosbros.lib.PlatformConverter
-import io.andrewohara.cheetosbros.sources.Game
 import io.andrewohara.cheetosbros.sources.Player
 import io.andrewohara.cheetosbros.sources.LibraryItem
 import io.andrewohara.cheetosbros.sources.Platform
-import java.time.Instant
 
 class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
 
@@ -37,16 +34,6 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
         mapper.batchSave(toSave)
     }
 
-    fun getAchievementStatusCacheDate(player: Player, game: Game): Instant? {
-        val item = mapper.load(uuid(player), game.id) ?: return null
-        return item.achievementStatusCacheDate
-    }
-
-    fun updateAchievementStatusCacheDate(player: Player, game: Game, time: Instant) {
-        val item = mapper.load(uuid(player), game.id) ?: return
-        mapper.save(item.copy(achievementStatusCacheDate = time))
-    }
-
     @DynamoDBDocument
     data class DynamoLibraryItem(
             @DynamoDBHashKey
@@ -57,9 +44,6 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
 
             @DynamoDBTypeConverted(converter = PlatformConverter::class)
             var platform: Platform? = null,
-
-            @DynamoDBTypeConverted(converter = InstantConverter::class)
-            var achievementStatusCacheDate: Instant? = null
     ) {
         constructor(player: Player, status: LibraryItem): this(
                 playerUuid = "${player.platform}-${player.id}",

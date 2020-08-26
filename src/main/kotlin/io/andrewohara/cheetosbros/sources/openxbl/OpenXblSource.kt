@@ -14,8 +14,8 @@ import java.net.http.HttpResponse
  * https://xbl.io/
  */
 class OpenXblSource(private val apiKey: String): Source {
-    companion object {
 
+    companion object {
         private const val host = "https://xbl.io/api/v2"
         private val mapper = jacksonObjectMapper()
                 .registerModule(JavaTimeModule())
