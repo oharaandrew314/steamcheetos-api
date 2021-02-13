@@ -1,4 +1,4 @@
-package io.andrewohara.cheetosbros.api.auth
+package io.andrewohara.cheetosbros.lib
 
 import org.bouncycastle.util.io.pem.PemObject
 import org.bouncycastle.util.io.pem.PemReader

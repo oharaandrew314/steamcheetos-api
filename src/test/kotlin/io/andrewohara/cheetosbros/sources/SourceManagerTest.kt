@@ -1,123 +1,64 @@
 package io.andrewohara.cheetosbros.sources
 
-import io.andrewohara.cheetosbros.TestDriver
+import io.andrewohara.cheetosbros.api.ApiTestDriver
 import org.assertj.core.api.Assertions.*
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
 class SourceManagerTest {
 
-    @Rule @JvmField val driver = TestDriver()
+    @Rule @JvmField val apiDriver = ApiTestDriver()
+    @Rule @JvmField val sourceDriver = SourceTestDriver()
 
-    @Test
-    fun `sync library across single platform`() {
-        val player = driver.createPlayer(Platform.Steam)
+    private lateinit var testObj: SourceManager
 
-        val game1 = driver.createGame(Platform.Steam)
-        driver.addToLibrary(player, game1)
-
-        val game2 = driver.createGame(Platform.Steam)
-        driver.addToLibrary(player, game2)
-
-        driver.createGame(Platform.Steam)
-
-        val user = driver.createUser("user1", player)
-        driver.sourceManager.getLibrary(user, player)
-
-        assertThat(driver.gamesManager.listGames(user)).containsExactlyInAnyOrder(game1, game2)
+    @Before
+    fun setup() {
+        testObj = SourceManager(
+            sourceFactory = sourceDriver.sourceFactory,
+            gamesDao = apiDriver.gamesDao,
+            gameLibraryDao = apiDriver.gameLibraryDao,
+            achievementsDao = apiDriver.achievementsDao,
+            achievementStatusDao = apiDriver.achievementStatusDao
+        )
     }
 
     @Test
     fun `sync library`() {
-        val player = driver.createPlayer(Platform.Steam)
+        val player = sourceDriver.createPlayer(Platform.Steam)
 
-        val game1 = driver.createGame(Platform.Steam)
-        driver.addToLibrary(player, game1)
+        val game1 = sourceDriver.createGame(player.platform)
+        sourceDriver.addToLibrary(player, game1)
 
-        val game2 = driver.createGame(Platform.Steam)
-        driver.addToLibrary(player, game2)
+        val game2 = sourceDriver.createGame(Platform.Steam)
+        sourceDriver.addToLibrary(player, game2)
 
-        val user = driver.createUser()
+        sourceDriver.createGame(Platform.Steam)
 
-        assertThat(driver.sourceManager.getLibrary(user, player)).containsExactlyInAnyOrder(game1, game2)
+        testObj.sync(player, sourceDriver.source(player))
+
+        assertThat(apiDriver.gameLibraryDao.list(player)).containsExactlyInAnyOrder(LibraryItem(game1), LibraryItem(game2))
+        assertThat(apiDriver.gamesDao.batchGet(player.platform, listOf(game1.id, game2.id))).containsExactlyInAnyOrder(game1, game2)
     }
 
     @Test
-    fun `sync game achievements`() {
-        val game = driver.createGame(Platform.Xbox)
-        val cheeto1 = driver.createAchievement(game, "Complete the Tutorial")
-        val cheeto2 = driver.createAchievement(game, "Complete the Game")
+    fun `sync game with achievements`() {
+        val player = sourceDriver.createPlayer(Platform.Steam)
 
-        val player = driver.createPlayer(Platform.Xbox)
-        driver.addToLibrary(player, game)
+        val game = sourceDriver.createGame(Platform.Steam)
+        sourceDriver.addToLibrary(player, game)
+        val achievement1 = sourceDriver.createAchievement(game, "Complete the Tutorial")
+        val achievement2 = sourceDriver.createAchievement(game, "Complete the Game")
+        val status1 = sourceDriver.unlockAchievement(player, game, achievement1, Instant.ofEpochSecond(1000))
 
-        val user = driver.createUser(xbox = player)
+        testObj.sync(player, sourceDriver.source(player))
 
-        assertThat(driver.sourceManager.getAchievements(user, game)).containsExactlyInAnyOrder(cheeto1, cheeto2)
-    }
-
-    @Test
-    fun `sync achievements statuses`() {
-        val player = driver.createPlayer(Platform.Xbox)
-
-        val game = driver.createGame(Platform.Xbox)
-        driver.addToLibrary(player, game)
-        val cheeto1 = driver.createAchievement(game, "Complete the Tutorial")
-        driver.createAchievement(game, "Complete the Game")
-        val status1 = driver.unlockAchievement(player, game, cheeto1, Instant.ofEpochSecond(1000))
-
-        val user = driver.createUser(xbox = player)
-
-        assertThat(driver.sourceManager.getAchievementStatus(user, game, player)).containsExactlyInAnyOrder(status1)
-    }
-
-    @Test
-    fun `discover friends`() {
-        val player = driver.createPlayer(Platform.Steam, displayName = "My steam account")
-
-        val friend1 = driver.createPlayer(platform = Platform.Steam, displayName = "steam friend")
-        driver.addFriend(player = player, friend = friend1)
-
-        val friend2 = driver.createPlayer(platform = Platform.Steam, displayName = "xbox friend")
-        driver.addFriend(player = player, friend = friend2)
-
-        val user = driver.createUser(steam = player)
-
-        assertThat(driver.sourceManager.getFriends(user, player)).containsExactlyInAnyOrder(friend1.id, friend2.id)
-    }
-
-    @Test
-    fun `discover friends twice when there are new ones in between`() {
-        val player = driver.createPlayer(Platform.Steam)
-        val user = driver.createUser(steam = player)
-
-        val friend1 = driver.createPlayer(Platform.Steam)
-        driver.addFriend(player = player, friend = friend1)
-
-        assertThat(driver.sourceManager.getFriends(user, player)).containsExactlyInAnyOrder(friend1.id)
-
-        val friend2 = driver.createPlayer(Platform.Steam)
-        driver.addFriend(player = player, friend = friend2)
-
-        assertThat(driver.sourceManager.getFriends(user, player)).containsExactlyInAnyOrder(friend1.id, friend2.id)
-    }
-
-    @Test
-    fun `discover friends twice when some were deleted in between`() {
-        val player = driver.createPlayer(Platform.Xbox)
-        val user = driver.createUser(xbox = player)
-
-        val friend1 = driver.createPlayer(Platform.Xbox)
-        driver.addFriend(player = player, friend = friend1)
-
-        val friend2 = driver.createPlayer(Platform.Xbox)
-        driver.addFriend(player = player, friend = friend2)
-
-        assertThat(driver.sourceManager.getFriends(user, player)).containsExactlyInAnyOrder(friend1.id, friend2.id)
-
-        driver.removeFriend(player = player, friend = friend1)
-
-        assertThat(driver.sourceManager.getFriends(user, player)).containsExactlyInAnyOrder(friend2.id)
+        assertThat(apiDriver.achievementsDao[game]).containsExactlyInAnyOrder(achievement1, achievement2)
+        assertThat(apiDriver.achievementStatusDao[player, game]).containsExactlyInAnyOrder(
+            status1,
+            AchievementStatus(achievementId = achievement2.id, unlockedOn = null)
+        )
     }
 }

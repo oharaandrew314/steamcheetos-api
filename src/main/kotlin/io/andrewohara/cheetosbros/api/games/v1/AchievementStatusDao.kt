@@ -19,7 +19,7 @@ class AchievementStatusDao(tableName: String, client: AmazonDynamoDB) {
         mapper.batchSave(items)
     }
 
-    fun list(player: Player, game: Game): Collection<AchievementStatus> {
+    operator fun get(player: Player, game: Game): Collection<AchievementStatus> {
         val query = DynamoDBQueryExpression<DynamoUserAchievement>()
                 .withHashKeyValues(DynamoUserAchievement(playerAndGameId = hashKey(player, game)))
 

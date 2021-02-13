@@ -33,32 +33,8 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
         mapper.save(item)
     }
 
-    private fun batchGet(platform: Platform, ids: Collection<String>): Collection<Player> {
-        val keys = ids.map { DynamoPlayer(uuid = uuid(platform, it)) }
-        return mapper.batchLoad(keys).map { it.toPlayer() }
-    }
-
     operator fun get(platform: Platform, playerId: String): Player? {
         return mapper.load(uuid(platform, playerId))?.toPlayer()
-    }
-
-    fun getFriends(player: Player): Collection<Player>? {
-        val friendIds = mapper.load(uuid(player))?.friendIds ?: return null
-
-        val friends = batchGet(player.platform, friendIds)
-                .map { it.id to it }
-                .toMap()
-
-        return friendIds.map { id ->
-            friends[id] ?: Player(platform = player.platform, id = id, username = "Unknown user", avatar = null)
-        }
-    }
-
-    fun saveFriends(player: Player, friendIds: Collection<String>) {
-        val item = mapper.load(uuid(player)) ?: return
-        item.friendIds = friendIds.toList()
-
-        mapper.save(item)
     }
 
     @DynamoDBDocument
@@ -73,8 +49,6 @@ class PlayersDao(tableName: String, client: AmazonDynamoDB) {
             @DynamoDBTypeConverted(converter = PlatformConverter::class) var platform: Platform? = null,
             var username: String? = null,
             var avatar: String? = null,
-
-            var friendIds: List<String> = emptyList(),
     ) {
         constructor(player: Player): this(
             uuid = "${player.platform}-${player.id}",

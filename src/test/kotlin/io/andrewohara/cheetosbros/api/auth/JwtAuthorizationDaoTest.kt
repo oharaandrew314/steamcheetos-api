@@ -1,6 +1,6 @@
-package io.andrewohara.cheetosbros.auth
+package io.andrewohara.cheetosbros.api.auth
 
-import io.andrewohara.cheetosbros.TestDriver
+import io.andrewohara.cheetosbros.api.ApiTestDriver
 import io.andrewohara.cheetosbros.api.users.User
 import org.assertj.core.api.Assertions.*
 import org.junit.Rule
@@ -8,7 +8,7 @@ import org.junit.Test
 
 class JwtAuthorizationDaoTest {
 
-    @Rule @JvmField val driver = TestDriver()
+    @Rule @JvmField val driver = ApiTestDriver()
 
     @Test
     fun `resolve valid token`() {

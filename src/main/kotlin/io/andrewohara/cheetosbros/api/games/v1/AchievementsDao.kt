@@ -10,7 +10,7 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoAchievement, String, String>(tableName, client)
 
-    fun list(game: Game): Collection<Achievement> {
+    operator fun get(game: Game): Collection<Achievement> {
         val query = DynamoDBQueryExpression<DynamoAchievement>()
                 .withHashKeyValues(DynamoAchievement(gameUuid = uuid(game)))
 

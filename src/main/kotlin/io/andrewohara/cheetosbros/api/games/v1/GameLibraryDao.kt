@@ -2,7 +2,6 @@ package io.andrewohara.cheetosbros.api.games.v1
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
-import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.lib.PlatformConverter
 import io.andrewohara.cheetosbros.sources.Player
@@ -13,18 +12,14 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoLibraryItem, String, String>(tableName, client)
 
-    fun listGameIds(player: Player): Collection<String> {
+    fun list(player: Player): Collection<LibraryItem> {
         val query = DynamoDBQueryExpression<DynamoLibraryItem>()
-                .withHashKeyValues(DynamoLibraryItem(playerUuid = uuid(player)))
-                .withProjectionExpression("gameId")
+            .withHashKeyValues(DynamoLibraryItem(playerUuid = player.uuid()))
+            .withProjectionExpression("gameId")
 
-        val result = mapper.query(query)
-
-        return result.mapNotNull { it.gameId }
-    }
-
-    fun get(user: User, gameUuid: String): LibraryItem? {
-        return mapper.load(user.id, gameUuid)?.toGameStatus()
+        return mapper
+            .query(query)
+            .map { it.toModel() }
     }
 
     fun batchSave(player: Player, libraryItems: Collection<LibraryItem>) {
@@ -36,25 +31,32 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
 
     @DynamoDBDocument
     data class DynamoLibraryItem(
-            @DynamoDBHashKey
-            var playerUuid: String? = null,
+        @DynamoDBHashKey
+        var playerUuid: String? = null,
 
-            @DynamoDBRangeKey
-            var gameId: String? = null,
+        @DynamoDBRangeKey
+        var gameId: String? = null,
 
-            @DynamoDBTypeConverted(converter = PlatformConverter::class)
-            var platform: Platform? = null,
+        var gameName: String? = null,
+
+        @DynamoDBTypeConverted(converter = PlatformConverter::class)
+        var platform: Platform? = null,
     ) {
-        constructor(player: Player, status: LibraryItem): this(
-                playerUuid = "${player.platform}-${player.id}",
-                gameId = status.gameId,
-                platform = player.platform,
+        constructor(player: Player, status: LibraryItem) : this(
+            playerUuid = "${player.platform}-${player.id}",
+            gameId = status.gameId,
+            platform = player.platform,
+            gameName = status.gameName
         )
 
-        fun toGameStatus() = LibraryItem(platform = platform!!, gameId = gameId!!)
+        fun toModel() = LibraryItem(
+            platform = platform!!,
+            gameId = gameId!!,
+            gameName = gameName!!
+        )
     }
 
     companion object {
-        private fun uuid(player: Player) = "${player.platform}-${player.id}"
+        private fun Player.uuid() = "$platform-$id"
     }
 }

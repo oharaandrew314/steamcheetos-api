@@ -1,49 +1,34 @@
-package io.andrewohara.cheetosbros
+package io.andrewohara.cheetosbros.api
 
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
-import io.andrewohara.cheetosbros.api.CacheConfig
 import io.andrewohara.cheetosbros.api.auth.AuthorizationDao
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
-import io.andrewohara.cheetosbros.api.auth.PemUtils
+import io.andrewohara.cheetosbros.lib.PemUtils
 import io.andrewohara.cheetosbros.api.games.v1.*
 import io.andrewohara.cheetosbros.api.users.*
 import io.andrewohara.cheetosbros.sources.*
 import org.junit.rules.ExternalResource
-import java.time.Duration
 import java.time.Instant
 import java.util.*
 
-class TestDriver: ExternalResource() {
+class ApiTestDriver: ExternalResource() {
 
     // Daos
     private lateinit var playersDao: PlayersDao
     private lateinit var usersDao: UsersDao
-    private lateinit var gamesDao: GamesDao
-    private lateinit var achievementsDao: AchievementsDao
-    private lateinit var gameLibraryDao: GameLibraryDao
-    private lateinit var achievementStatusDao: AchievementStatusDao
-    private lateinit var cacheDao: CacheDao
+    lateinit var gamesDao: GamesDao
+    lateinit var achievementsDao: AchievementsDao
+    lateinit var gameLibraryDao: GameLibraryDao
+    lateinit var achievementStatusDao: AchievementStatusDao
     lateinit var authorizationDao: AuthorizationDao
-
-    // Sources
-    private lateinit var steamSource: FakeSource
-    private lateinit var xboxSource: FakeSource
-    private lateinit var sourceFactory: SourceFactory
 
     // Managers
     lateinit var gamesManager: GamesManager
-    lateinit var sourceManager: SourceManager
     lateinit var usersManager: UsersManager
 
     // Config
     private lateinit var time: Instant
-    var cacheConfig = CacheConfig(
-            library = Duration.ofDays(1),
-            achievements = Duration.ofDays(30),
-            achievementStatuses = Duration.ofHours(1),
-            friends = Duration.ofDays(1)
-    )
 
     override fun before() {
         val dynamoDb = MockAmazonDynamoDB()
@@ -68,9 +53,6 @@ class TestDriver: ExternalResource() {
         achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb)
         achievementStatusDao.mapper.createTable(ProvisionedThroughput(1, 1))
 
-        cacheDao = CacheDao("cache", dynamoDb)
-        cacheDao.mapper.createTable(ProvisionedThroughput(1, 1))
-
         authorizationDao = JwtAuthorizationDao(
                 issuer = "cheetosbros-test",
                 privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
@@ -78,13 +60,8 @@ class TestDriver: ExternalResource() {
                 playersDao = playersDao
         )
 
-        steamSource = FakeSource(Platform.Steam)
-        xboxSource = FakeSource(Platform.Xbox)
-        sourceFactory = FakeSourceFactory(steamSource = steamSource, xboxSource = xboxSource)
-
-        sourceManager = SourceManager(sourceFactory)
-        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao, sourceManager, cacheConfig, cacheDao) { time }
-        usersManager = UsersManager(usersDao, playersDao, cacheConfig, sourceManager, cacheDao) { time }
+        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao)
+        usersManager = UsersManager(usersDao, playersDao)
     }
 
     fun createPlayer(platform: Platform, displayName: String? = null): Player {
@@ -95,7 +72,7 @@ class TestDriver: ExternalResource() {
                 platform = platform,
                 username = displayName ?: "player-$id"
         )
-        platform.source().addPlayer(player)
+        playersDao.save(player)
         return player
     }
 
@@ -107,7 +84,7 @@ class TestDriver: ExternalResource() {
                 name = name ?: "game-$id",
                 platform = platform
         )
-        platform.source().addGame(game)
+        gamesDao.save(game)
 
         return game
     }
@@ -124,7 +101,7 @@ class TestDriver: ExternalResource() {
                 score = score
         )
 
-        game.platform.source().addAchievement(game.id, achievement)
+        achievementsDao.batchSave(game, listOf(achievement))
 
         return achievement
     }
@@ -135,30 +112,13 @@ class TestDriver: ExternalResource() {
                 unlockedOn = unlocked
         )
 
-        game.platform.source().addUserAchievement(game.id, player.id, status)
+        achievementStatusDao.batchSave(player, game, listOf(status))
 
         return status
     }
 
     fun addToLibrary(player: Player, game: Game) {
-        val source = player.platform.source()
-
-        source.addGameToLibrary(player.id, game.id)
-    }
-
-    fun addFriend(player: Player, friend: Player) {
-        val source = player.platform.source()
-        source.addFriend(userId = player.id, friendId = friend.id)
-    }
-
-    fun removeFriend(player: Player, friend: Player) {
-        val source = player.platform.source()
-        source.removeFriend(userId = player.id, friendId = friend.id)
-    }
-
-    private fun Platform.source() = when(this) {
-        Platform.Steam -> steamSource
-        Platform.Xbox -> xboxSource
+        gameLibraryDao.batchSave(player, listOf(LibraryItem(game)))
     }
 
     fun createUser(displayName: String? = null, xbox: Player? = null, steam: Player? = null): User {

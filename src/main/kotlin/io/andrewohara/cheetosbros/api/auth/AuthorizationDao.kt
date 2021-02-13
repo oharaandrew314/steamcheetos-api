@@ -5,6 +5,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.exceptions.JWTDecodeException
 import io.andrewohara.cheetosbros.api.users.PlayersDao
 import io.andrewohara.cheetosbros.api.users.User
+import io.andrewohara.cheetosbros.lib.PemUtils
 import io.andrewohara.cheetosbros.sources.Platform
 import org.bouncycastle.util.io.pem.PemObject
 import java.security.interfaces.ECPrivateKey

@@ -17,7 +17,7 @@ class GamesControllerV1(private val gamesManager: GamesManager) {
         app.get("/v1/games/:platform", ::listGames, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id", ::getGame, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id/achievements", ::listAchievements, roles(CheetosRole.User))
-        app.get("/v1/games/:platform/:game_id/achievements/:player_id", ::listAchievementStatus, roles(CheetosRole.User))
+        app.get("/v1/games/:platform/:game_id/achievements/status", ::listAchievementStatus, roles(CheetosRole.User))
     }
 
     private fun listGames(ctx: Context) {
@@ -39,21 +39,20 @@ class GamesControllerV1(private val gamesManager: GamesManager) {
     }
 
     private fun listAchievements(ctx: Context) {
-        val user = ctx.attribute<User>("user")!!
         val platform = ctx.pathParam<Platform>("platform").get()
         val gameId = ctx.pathParam("game_id")
 
-        val achievements = gamesManager.listAchievements(user, platform, gameId) ?: throw NotFoundResponse()
+        val achievements = gamesManager.listAchievements(platform, gameId) ?: throw NotFoundResponse()
 
         ctx.json(achievements)
     }
 
     private fun listAchievementStatus(ctx: Context) {
         val user = ctx.attribute<User>("user")!!
+        val platform = ctx.pathParam<Platform>("platform").get()
         val gameId = ctx.pathParam("game_id")
-        val playerId = ctx.pathParam("player_id")
 
-        val achievements = gamesManager.listAchievementStatus(user, playerId = playerId, gameId = gameId) ?: throw NotFoundResponse()
+        val achievements = gamesManager.listAchievementStatus(user, platform, gameId) ?: throw NotFoundResponse()
 
         ctx.json(achievements)
     }

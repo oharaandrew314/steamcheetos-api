@@ -1,8 +1,7 @@
 plugins {
     id "com.github.johnrengelman.shadow" version "5.0.0"
-    id 'org.jetbrains.kotlin.jvm' version '1.4.0'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.30'
     id 'application'
-    id "jacoco"
 }
 
 mainClassName = 'io.andrewohara.cheetosbros.Server'
@@ -15,9 +14,9 @@ repositories {
 
 ext {
     ver = [
+            javalin: '3.13.0',
             slf4j: '1.7.30',
-            javalin: '3.9.1',
-            jackson: '2.11.2',
+            jackson: '2.12.0',
             aws: '1.11.845'
     ]
 }
@@ -25,40 +24,20 @@ ext {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
     implementation group: 'io.javalin', name: 'javalin', version: ver.javalin
-    implementation group: 'io.javalin', name: 'javalin-openapi', version: ver.javalin
     implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: ver.jackson
-    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr353', version: ver.jackson
+    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: ver.jackson
     implementation group: 'org.openid4java', name: 'openid4java', version: '1.0.0'
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
     implementation "com.amazonaws:aws-java-sdk-dynamodb:${ver.aws}"
     implementation 'com.auth0:java-jwt:3.10.3'
-    implementation 'org.bouncycastle:bcprov-jdk15on:1.59'
     implementation group: 'log4j', name: 'log4j', version: '1.2.17'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: ver.slf4j
-    implementation group: 'org.slf4j', name: 'slf4j-api', version: ver.slf4j
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.59'
+
+    runtime group: 'org.slf4j', name: 'slf4j-api', version: ver.slf4j
 
     testImplementation group: 'junit', name: 'junit', version: '4.12'
     testImplementation 'org.assertj:assertj-core:3.13.2'
     testImplementation 'com.github.javalin:javalin-test:0.5.0'
     testImplementation 'com.github.oharaandrew314:mock-aws-java-sdk:0.5.0'
 }
-
-jacocoTestCoverageVerification {
-     afterEvaluate {
-            classDirectories.setFrom(files(classDirectories.files.collect {
-                fileTree(
-                        dir: it,
-                        exclude: [
-                                'io/andrewohara/cheetosbros/sources/**'
-                        ])
-            }))
-        }
-    violationRules {
-        rule {
-            limit {
-                minimum = 0.8
-            }
-        }
-    }
-}
-check.dependsOn jacocoTestCoverageVerification

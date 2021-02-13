@@ -10,17 +10,7 @@ import io.javalin.http.NotFoundResponse
 class UsersControllerV1(app: Javalin, private val usersManager: UsersManager) {
 
     init {
-        app.get("/v1/friends/:platform", ::getFriends, roles(CheetosRole.User))
         app.get("/v1/players/me/:platform", ::getMyPlayer, roles(CheetosRole.User))
-    }
-
-    private fun getFriends(ctx: Context) {
-        val user = ctx.attribute<User>("user")!!
-        val platform = ctx.pathParam<Platform>("platform").get()
-
-        val friends = usersManager.getFriends(user, platform) ?: throw NotFoundResponse()
-
-        ctx.json(friends)
     }
 
     private fun getMyPlayer(ctx: Context) {
