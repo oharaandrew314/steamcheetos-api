@@ -46,6 +46,7 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, pub
         val players = playersDao.listForUser(user)
         val steamPlayer = players.firstOrNull { it.platform == Platform.Steam }
         val xboxPlayer = players.firstOrNull { it.platform == Platform.Xbox }
+        val avatar = players.mapNotNull { it.avatar }.firstOrNull()
 
         val builder = JWT.create().apply {
             withIssuer(issuer)
@@ -55,6 +56,7 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, pub
             withClaim("xboxId", xboxPlayer?.id)
             withClaim("steamUsername", steamPlayer?.username)
             withClaim("steamId", steamPlayer?.id)
+            withClaim("avatar", avatar)
         }
 
         return builder.sign(algorithm)

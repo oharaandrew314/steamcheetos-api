@@ -17,12 +17,12 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
         return mapper.query(query).map { it.toAchievement() }
     }
 
-//    fun countAchievements(game: Game): Int {
-//        val query = DynamoDBQueryExpression<DynamoAchievement>()
-//                .withHashKeyValues(DynamoAchievement(gameUuid = uuid(game)))
-//
-//        return mapper.count(query)
-//    }
+    fun countAchievements(game: Game): Int {
+        val query = DynamoDBQueryExpression<DynamoAchievement>()
+                .withHashKeyValues(DynamoAchievement(gameUuid = uuid(game)))
+
+        return mapper.count(query)
+    }
 
     fun batchSave(game: Game, achievements: Collection<Achievement>) {
         val items = achievements.map { DynamoAchievement(game, it) }

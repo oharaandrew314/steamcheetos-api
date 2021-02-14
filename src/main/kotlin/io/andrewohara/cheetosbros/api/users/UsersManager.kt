@@ -26,6 +26,8 @@ class UsersManager(
         return user
     }
 
+    fun getPlayers(user: User) = playersDao.listForUser(user)
+
     fun getPlayer(user: User, platform: Platform): Player? {
         return playersDao.listForUser(user)
                 .firstOrNull { it.platform == platform }

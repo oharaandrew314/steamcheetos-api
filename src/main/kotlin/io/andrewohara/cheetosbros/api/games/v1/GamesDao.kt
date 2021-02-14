@@ -6,14 +6,15 @@ import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.lib.PlatformConverter
 import io.andrewohara.cheetosbros.sources.Game
 import io.andrewohara.cheetosbros.sources.Platform
-import java.time.Duration
 
 class GamesDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoGame, String, Void>(tableName, client)
 
     fun save(game: Game) {
-        mapper.save(DynamoGame(game))
+        val item = DynamoGame(game)
+
+        mapper.save(item)
     }
 
     fun batchSave(games: Collection<Game>) {
@@ -42,7 +43,7 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
             var displayImage: String? = null
     ) {
         constructor(game: Game) : this(
-                uuid = uuid(game.platform, game.id),
+                uuid = game.uuid(),
                 id = game.id,
                 platform = game.platform,
                 name = game.name,
@@ -59,6 +60,7 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
 
     companion object {
         private fun uuid(platform: Platform, id: String) = "$platform-$id"
+        private fun Game.uuid() = uuid(platform, id)
     }
 }
 

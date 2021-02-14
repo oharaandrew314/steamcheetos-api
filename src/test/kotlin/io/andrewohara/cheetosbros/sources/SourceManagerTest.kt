@@ -68,7 +68,7 @@ class SourceManagerTest {
     }
 
     @Test
-    fun `sync game with no achievements - not saved`() {
+    fun `sync game with no achievements`() {
         val player = sourceDriver.createPlayer(Platform.Steam)
 
         val game = sourceDriver.createGame(Platform.Steam)
@@ -76,8 +76,8 @@ class SourceManagerTest {
 
         testObj.sync(player, sourceDriver.source(player))
 
-        assertThat(apiDriver.gamesDao[game.platform, game.id]).isNull()
-        assertThat(apiDriver.gameLibraryDao.listGameIds(player)).isEmpty()
+        assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
+        assertThat(apiDriver.gameLibraryDao.listGameIds(player)).containsExactly(game.id)
         assertThat(apiDriver.achievementsDao[game]).isEmpty()
     }
 }

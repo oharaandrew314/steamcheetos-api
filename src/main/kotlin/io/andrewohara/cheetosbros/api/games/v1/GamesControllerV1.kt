@@ -14,13 +14,22 @@ class GamesControllerV1(private val gamesManager: GamesManager) {
     fun register(app: Javalin) {
         JavalinValidation.register(Platform::class.java, Platform::valueOf)
 
-        app.get("/v1/games/:platform", ::listGames, roles(CheetosRole.User))
+        app.get("/v1/games", ::listGames, roles(CheetosRole.User))
+        app.get("/v1/games/:platform", ::listGamesForPlatform, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id", ::getGame, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id/achievements", ::listAchievements, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id/achievements/status", ::listAchievementStatus, roles(CheetosRole.User))
     }
 
     private fun listGames(ctx: Context) {
+        val user = ctx.attribute<User>("user")!!
+
+        val games = gamesManager.listGames(user)
+
+        ctx.json(games)
+    }
+
+    private fun listGamesForPlatform(ctx: Context) {
         val user = ctx.attribute<User>("user")!!
         val platform = ctx.pathParam<Platform>("platform").get()
 

@@ -6,20 +6,18 @@ import io.andrewohara.cheetosbros.api.users.UsersManager
 import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil
 import io.javalin.http.Context
-import io.javalin.http.NotFoundResponse
 
 class SyncApiV1(app: Javalin, private val users: UsersManager, private val sources: SourceManager) {
 
     init {
-        app.post("/v1/sync/:platform", ::manualSync, SecurityUtil.roles(CheetosRole.User))
+        app.post("/v1/sync", ::sync, SecurityUtil.roles(CheetosRole.User))
     }
 
-    private fun manualSync(context: Context) {
+    private fun sync(context: Context) {
         val user = context.attribute<User>("user")!!
-        val platform = context.pathParam<Platform>("platform").get()
 
-        val player = users.getPlayer(user, platform) ?: throw NotFoundResponse("No $platform player for ${user.displayName}")
-
-        sources.sync(user, player)
+        for (player in users.getPlayers(user)) {
+            sources.sync(user, player)
+        }
     }
 }

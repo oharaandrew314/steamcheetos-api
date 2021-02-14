@@ -11,6 +11,20 @@ class GamesManager(
         private val achievementsDao: AchievementsDao,
         private val achievementStatusDao: AchievementStatusDao
 ) {
+    fun listGames(user: User): Collection<Game> {
+        val games = mutableSetOf<Game>()
+
+        for (player in playersDao.listForUser(user)) {
+            val gameIds = gameLibraryDao.listGameIds(player)
+            games.addAll(gamesDao.batchGet(player.platform, gameIds))
+        }
+
+        // TODO maybe filter out games with no achievements
+        // TODO add metadata to game library item for achievement progress
+
+        return games
+    }
+
     fun listGames(user: User, platform: Platform): Collection<Game> {
         val player = playersDao.listForUser(user)
             .firstOrNull { it.platform == platform }

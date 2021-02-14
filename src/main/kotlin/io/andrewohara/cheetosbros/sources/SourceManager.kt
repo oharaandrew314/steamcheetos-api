@@ -16,7 +16,7 @@ class SourceManager(
     private val achievementStatusDao: AchievementStatusDao
     ) {
 
-    private val syncExecutor = Executors.newFixedThreadPool(10)
+    private val syncExecutor = Executors.newSingleThreadExecutor()
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -35,30 +35,37 @@ class SourceManager(
         val games = source.library(player.id)
 
         for (game in games) {
-            syncExecutor.run {
+            syncExecutor.submit {
                 syncGame(source, player, game)
+                Thread.sleep(1000)
             }
         }
 
-        log.info("Action=SyncPlayerComplete Player=${player.platform}-${player.username}")
+        log.info("Action=SyncPlayerComplete Player=${player.platform}-${player.username} Games=${games.size}")
     }
 
     private fun syncGame(source: Source, player: Player, game: Game) {
         log.debug("Action=SyncGameStart Player=${player.platform}-${player.username} Game=${game.platform}-${game.id}")
 
-        val achievements = source.achievements(game.id)
-        if (achievements.isEmpty()) {
-            log.debug("Action=SyncGameAbort Player=${player.platform}-${player.username} Game=${game.platform}-${game.id} Reason=achievements.none")
-            return
+        val alreadyExists = gamesDao[game.platform, game.id] != null
+
+        // for now, assume that games can't ever get new achievements
+        val numAchievements = if (!alreadyExists) {
+            val achievements = source.achievements(game.id)
+            achievementsDao.batchSave(game, achievements)
+            gamesDao.save(game)
+            achievements.size
+        } else {
+            achievementsDao.countAchievements(game)
         }
 
-        val progress = source.userAchievements(game.id, player.id)
-
-        gamesDao.save(game)
         gameLibraryDao.save(player, game)
-        achievementsDao.batchSave(game, achievements)
-        achievementStatusDao.batchSave(player, game, progress)
 
-        log.debug("Action=SyncGameComplete Player=${player.platform}-${player.username} Game=${game.platform}-${game.id} Achievements=${achievements.size}")
+        if (numAchievements > 0) {
+            val progress = source.userAchievements(game.id, player.id)
+            achievementStatusDao.batchSave(player, game, progress)
+        }
+
+        log.debug("Action=SyncGameComplete Player=${player.platform}-${player.username} Game=${game.platform}-${game.id} Achievements=$numAchievements")
     }
 }
