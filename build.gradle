@@ -1,11 +1,6 @@
 plugins {
-    id "com.github.johnrengelman.shadow" version "5.0.0"
     id 'org.jetbrains.kotlin.jvm' version '1.4.30'
-    id 'application'
 }
-
-mainClassName = 'io.andrewohara.cheetosbros.Server'
-archivesBaseName = 'App'
 
 repositories {
     mavenCentral()
@@ -17,22 +12,25 @@ ext {
             javalin: '3.13.0',
             slf4j: '1.7.30',
             jackson: '2.12.0',
-            aws: '1.11.845'
+            aws: '1.11.954'
     ]
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+//    implementation group: 'io.javalin', name: 'javalin-without-jetty', version: ver.javalin
     implementation group: 'io.javalin', name: 'javalin', version: ver.javalin
+    implementation 'com.amazonaws.serverless:aws-serverless-java-container-core:1.5.2'
     implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: ver.jackson
     implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: ver.jackson
     implementation group: 'org.openid4java', name: 'openid4java', version: '1.0.0'
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
     implementation "com.amazonaws:aws-java-sdk-dynamodb:${ver.aws}"
+    implementation "com.amazonaws:aws-java-sdk-ssm:${ver.aws}"
     implementation 'com.auth0:java-jwt:3.10.3'
-    implementation group: 'log4j', name: 'log4j', version: '1.2.17'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: ver.slf4j
     implementation 'org.bouncycastle:bcprov-jdk15on:1.59'
+    implementation 'com.amazonaws:aws-lambda-java-core:1.2.1'
 
     runtime group: 'org.slf4j', name: 'slf4j-api', version: ver.slf4j
 

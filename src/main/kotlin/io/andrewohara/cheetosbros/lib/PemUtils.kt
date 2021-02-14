@@ -2,13 +2,13 @@ package io.andrewohara.cheetosbros.lib
 
 import org.bouncycastle.util.io.pem.PemObject
 import org.bouncycastle.util.io.pem.PemReader
+import java.io.Reader
 import java.net.URL
 import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-
 
 class PemUtils(algorithm: String) {
 
@@ -25,10 +25,18 @@ class PemUtils(algorithm: String) {
     }
 
     companion object {
-        fun parsePEMFile(url: URL): PemObject? {
-            PemReader(url.openStream().reader()).use { reader ->
-                return reader.readPemObject()
+        fun parsePEMFile(content: String): PemObject? {
+            PemReader(content.reader()).use { r ->
+                return r.readPemObject()
             }
+        }
+
+        fun parsePEMFile(url: URL): PemObject? {
+            val content = url.openStream().reader().use {
+                it.readText()
+            }
+
+            return parsePEMFile(content)
         }
     }
 }

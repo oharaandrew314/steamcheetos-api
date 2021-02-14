@@ -21,7 +21,8 @@ class SourceManagerTest {
             gamesDao = apiDriver.gamesDao,
             gameLibraryDao = apiDriver.gameLibraryDao,
             achievementsDao = apiDriver.achievementsDao,
-            achievementStatusDao = apiDriver.achievementStatusDao
+            achievementStatusDao = apiDriver.achievementStatusDao,
+            syncExecutor = { command -> command.run() }
         )
     }
 

@@ -6,6 +6,7 @@ import io.andrewohara.cheetosbros.api.games.v1.GameLibraryDao
 import io.andrewohara.cheetosbros.api.games.v1.GamesDao
 import io.andrewohara.cheetosbros.api.users.User
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
 class SourceManager(
@@ -13,10 +14,9 @@ class SourceManager(
     private val gamesDao: GamesDao,
     private val gameLibraryDao: GameLibraryDao,
     private val achievementsDao: AchievementsDao,
-    private val achievementStatusDao: AchievementStatusDao
+    private val achievementStatusDao: AchievementStatusDao,
+    private val syncExecutor: Executor = Executors.newSingleThreadExecutor()
     ) {
-
-    private val syncExecutor = Executors.newSingleThreadExecutor()
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -35,7 +35,7 @@ class SourceManager(
         val games = source.library(player.id)
 
         for (game in games) {
-            syncExecutor.submit {
+            syncExecutor.execute {
                 syncGame(source, player, game)
                 Thread.sleep(1000)
             }

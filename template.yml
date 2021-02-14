@@ -1,0 +1,161 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  PrivatePemSsmName:
+    Type: String
+  PublicPemSsmName:
+    Type: String
+  SteamApiKeySsmName:
+    Type: String
+#  CertificateArn:
+#    Type: String
+#  DomainName:
+#    Type: String
+
+Resources:
+  ApiHandler:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Runtime: java11
+      Timeout: 10
+      Handler: io.andrewohara.cheetosbros.ApiLambdaHandler
+      MemorySize: 1024
+      Environment:
+        Variables:
+          GAMES_TABLE: !Ref Games
+          ACHIEVEMENTS_TABLE: !Ref Achievements
+          ACHIEVEMENT_STATUS_TABLE: !Ref AchievementStatus
+          USERS_TABLE: !Ref Users
+          PLAYERS_TABLE: !Ref Players
+          LIBRARY_TABLE: !Ref GameLibrary
+          STEAM_API_KEY_NAME: !Ref SteamApiKeySsmName
+          PRIVATE_PEM_NAME: !Ref PrivatePemSsmName
+          PUBLIC_PEM_NAME: !Ref PublicPemSsmName
+          PEM_ISSUER: !Ref AWS::StackName
+
+      Events:
+        HttpApiEvent:
+          Type: HttpApi
+#          Properties:
+#            PayloadFormatVersion: '1.0'
+  #          ApiId: !Ref Api
+      Policies:
+        - DynamoDBCrudPolicy:
+           TableName: !GetAtt Users.Arn
+        - DynamoDBCrudPolicy:
+           TableName: !GetAtt Games.Arn
+        - DynamoDBCrudPolicy:
+           TableName: !GetAtt Achievements.Arn
+        - DynamoDBCrudPolicy:
+           TableName: !GetAtt GameLibrary.Arn
+        - DynamoDBCrudPolicy:
+           TableName: !GetAtt AchievementStatus.Arn
+        - DynamoDBCrudPolicy:
+            TableName: !GetAtt Players.Arn
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: "ssm"
+              Effect: "Allow"
+              Action:
+                - "ssm:GetParameters"
+                - "ssm:GetParameter"
+                - "ssm:GetParametersByPath"
+              Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PrivatePemSsmName}
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PublicPemSsmName}
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SteamApiKeySsmName}
+
+#  Api:
+#    Type: AWS::Serverless::HttpApi
+#    Properties:
+#      DisableExecuteApiEndpoint: true
+#      Domain:
+#        CertificateArn: !Ref CertificateArn
+#        DomainName: !Ref DomainName
+
+  Users:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  Games:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uuid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uuid
+          KeyType: HASH
+
+  Achievements:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: gameUuid
+          AttributeType: S
+        - AttributeName: achievementId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: gameUuid
+          KeyType: HASH
+        - AttributeName: achievementId
+          KeyType: RANGE
+
+  GameLibrary:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: playerUuid
+          AttributeType: S
+        - AttributeName: gameId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: playerUuid
+          KeyType: HASH
+        - AttributeName: gameId
+          KeyType: RANGE
+
+  AchievementStatus:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: playerAndGameId
+          AttributeType: S
+        - AttributeName: achievementId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: playerAndGameId
+          KeyType: HASH
+        - AttributeName: achievementId
+          KeyType: RANGE
+
+  Players:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uuid
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uuid
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: users
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL

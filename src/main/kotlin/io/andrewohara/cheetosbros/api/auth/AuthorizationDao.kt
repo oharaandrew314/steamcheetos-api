@@ -2,12 +2,14 @@ package io.andrewohara.cheetosbros.api.auth
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.auth0.jwt.exceptions.InvalidClaimException
 import com.auth0.jwt.exceptions.JWTDecodeException
 import io.andrewohara.cheetosbros.api.users.PlayersDao
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.PemUtils
 import io.andrewohara.cheetosbros.sources.Platform
 import org.bouncycastle.util.io.pem.PemObject
+import org.slf4j.LoggerFactory
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
 
@@ -18,6 +20,8 @@ interface AuthorizationDao {
 }
 
 class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, publicKey: PemObject, private val playersDao: PlayersDao): AuthorizationDao {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     private val algorithm = let {
         val pemUtils = PemUtils("EC")
@@ -36,6 +40,10 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, pub
         val decoded = try {
             verifier.verify(token)
         } catch (e: JWTDecodeException) {
+            log.error("Invalid JWT", e)
+            return null
+        } catch (e: InvalidClaimException) {
+            log.info("Invalid JWT claim", e)
             return null
         }
 
