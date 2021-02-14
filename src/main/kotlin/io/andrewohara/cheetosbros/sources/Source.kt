@@ -28,16 +28,6 @@ data class Achievement(
         val score: Int?
 )
 
-data class LibraryItem(
-        val platform: Platform,
-        val gameId: String
-) {
-    constructor(game: Game): this(
-        platform = game.platform,
-        gameId = game.id
-    )
-}
-
 data class AchievementStatus(
         val achievementId: String,
         val unlockedOn: Instant?

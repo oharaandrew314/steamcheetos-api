@@ -118,7 +118,7 @@ class ApiTestDriver: ExternalResource() {
     }
 
     fun addToLibrary(player: Player, game: Game) {
-        gameLibraryDao.batchSave(player, listOf(LibraryItem(game)))
+        gameLibraryDao.batchSave(player, listOf(game))
     }
 
     fun createUser(displayName: String? = null, xbox: Player? = null, steam: Player? = null): User {

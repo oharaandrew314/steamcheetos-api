@@ -4,8 +4,8 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.lib.PlatformConverter
+import io.andrewohara.cheetosbros.sources.Game
 import io.andrewohara.cheetosbros.sources.Player
-import io.andrewohara.cheetosbros.sources.LibraryItem
 import io.andrewohara.cheetosbros.sources.Platform
 
 class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
@@ -20,11 +20,16 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
         return mapper.query(query).map { it.gameId!! }
     }
 
-    fun batchSave(player: Player, libraryItems: Collection<LibraryItem>) {
-        val existingGameIds = mapper.batchLoad(libraryItems.map { DynamoLibraryItem(player, it) }).map { it.gameId }
+    fun save(player: Player, game: Game) {
+        val item = DynamoLibraryItem(player, game)
 
-        val toSave = libraryItems.filter { it.gameId !in existingGameIds }.map { DynamoLibraryItem(player, it) }
-        mapper.batchSave(toSave)
+        mapper.save(item)
+    }
+
+    fun batchSave(player: Player, games: Collection<Game>) {
+        val items = games.map { DynamoLibraryItem(player, it) }
+
+        mapper.batchSave(items)
     }
 
     @DynamoDBDocument
@@ -38,9 +43,9 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
         @DynamoDBTypeConverted(converter = PlatformConverter::class)
         var platform: Platform? = null,
     ) {
-        constructor(player: Player, status: LibraryItem) : this(
+        constructor(player: Player, game: Game) : this(
             playerUuid = "${player.platform}-${player.id}",
-            gameId = status.gameId,
+            gameId = game.id,
             platform = player.platform
         )
     }
