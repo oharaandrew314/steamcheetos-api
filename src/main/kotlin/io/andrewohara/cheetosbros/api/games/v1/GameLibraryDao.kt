@@ -12,14 +12,12 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoLibraryItem, String, String>(tableName, client)
 
-    fun list(player: Player): Collection<LibraryItem> {
+    fun listGameIds(player: Player): Collection<String> {
         val query = DynamoDBQueryExpression<DynamoLibraryItem>()
             .withHashKeyValues(DynamoLibraryItem(playerUuid = player.uuid()))
             .withProjectionExpression("gameId")
 
-        return mapper
-            .query(query)
-            .map { it.toModel() }
+        return mapper.query(query).map { it.gameId!! }
     }
 
     fun batchSave(player: Player, libraryItems: Collection<LibraryItem>) {
@@ -37,22 +35,13 @@ class GameLibraryDao(tableName: String, client: AmazonDynamoDB) {
         @DynamoDBRangeKey
         var gameId: String? = null,
 
-        var gameName: String? = null,
-
         @DynamoDBTypeConverted(converter = PlatformConverter::class)
         var platform: Platform? = null,
     ) {
         constructor(player: Player, status: LibraryItem) : this(
             playerUuid = "${player.platform}-${player.id}",
             gameId = status.gameId,
-            platform = player.platform,
-            gameName = status.gameName
-        )
-
-        fun toModel() = LibraryItem(
-            platform = platform!!,
-            gameId = gameId!!,
-            gameName = gameName!!
+            platform = player.platform
         )
     }
 

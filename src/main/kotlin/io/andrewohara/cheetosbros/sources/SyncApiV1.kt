@@ -1,15 +1,17 @@
 package io.andrewohara.cheetosbros.sources
 
+import io.andrewohara.cheetosbros.api.auth.CheetosRole
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.api.users.UsersManager
 import io.javalin.Javalin
+import io.javalin.core.security.SecurityUtil
 import io.javalin.http.Context
 import io.javalin.http.NotFoundResponse
 
 class SyncApiV1(app: Javalin, private val users: UsersManager, private val sources: SourceManager) {
 
     init {
-        app.post("/v1/sync/:platform", ::manualSync)
+        app.post("/v1/sync/:platform", ::manualSync, SecurityUtil.roles(CheetosRole.User))
     }
 
     private fun manualSync(context: Context) {

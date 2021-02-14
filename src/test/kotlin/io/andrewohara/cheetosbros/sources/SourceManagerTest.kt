@@ -39,7 +39,7 @@ class SourceManagerTest {
 
         testObj.sync(player, sourceDriver.source(player))
 
-        assertThat(apiDriver.gameLibraryDao.list(player)).containsExactlyInAnyOrder(LibraryItem(game1), LibraryItem(game2))
+        assertThat(apiDriver.gameLibraryDao.listGameIds(player)).containsExactlyInAnyOrder(game1.id, game2.id)
         assertThat(apiDriver.gamesDao.batchGet(player.platform, listOf(game1.id, game2.id))).containsExactlyInAnyOrder(game1, game2)
     }
 

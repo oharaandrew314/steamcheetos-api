@@ -49,6 +49,7 @@ class ApiServer(
 //        OpenXblAuthController(System.getenv("OPENXBL_PUBLIC_APP_KEY"), authManager).register(app)
         GamesControllerV1(gamesManager).register(app)
         UsersControllerV1(app, usersManager)
+        SyncApiV1(app, usersManager, syncManager)
     }
 
     companion object {

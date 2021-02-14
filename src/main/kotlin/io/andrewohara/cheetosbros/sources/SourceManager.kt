@@ -40,9 +40,11 @@ class SourceManager(
             achievementsDao.batchSave(game, achievements)
             log.debug("Synced ${achievements.size} achievements for ${game.platform} ${game.name}")
 
-            val status = source.userAchievements(game.id, player.id)
-            achievementStatusDao.batchSave(player, game, status)
-            log.debug("Synced ${status.size} achievement statuses for ${player.platform} ${player.username} for ${game.name}")
+            if (achievements.isNotEmpty()) {
+                val status = source.userAchievements(game.id, player.id)
+                achievementStatusDao.batchSave(player, game, status)
+                log.debug("Synced ${status.size} achievement statuses for ${player.platform} ${player.username} for ${game.name}")
+            }
         }
     }
 }

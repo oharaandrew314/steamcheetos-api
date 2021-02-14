@@ -16,14 +16,14 @@ class GamesManager(
             .firstOrNull { it.platform == platform }
             ?: return emptyList()
 
-        val ids = gameLibraryDao.list(player).map { it.gameId }
-        return gamesDao.batchGet(player.platform, ids)
+        val gameIds = gameLibraryDao.listGameIds(player)
+        return gamesDao.batchGet(platform, gameIds)
     }
 
     fun listAchievements(platform: Platform, gameId: String): Collection<Achievement>? {
         val game = gamesDao[platform, gameId] ?: return null
 
-        return achievementsDao.get(game)
+        return achievementsDao[game]
     }
 
     fun listAchievementStatus(user: User, platform: Platform, gameId: String): Collection<AchievementStatus>? {
@@ -33,7 +33,7 @@ class GamesManager(
             .firstOrNull { it.platform == platform }
             ?: return null
 
-        return achievementStatusDao.get(player, game)
+        return achievementStatusDao[player, game]
     }
 
     fun getGame(platform: Platform, gameId: String): Game? {

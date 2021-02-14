@@ -30,13 +30,11 @@ data class Achievement(
 
 data class LibraryItem(
         val platform: Platform,
-        val gameId: String,
-        val gameName: String
+        val gameId: String
 ) {
     constructor(game: Game): this(
         platform = game.platform,
-        gameId = game.id,
-        gameName = game.name
+        gameId = game.id
     )
 }
 
