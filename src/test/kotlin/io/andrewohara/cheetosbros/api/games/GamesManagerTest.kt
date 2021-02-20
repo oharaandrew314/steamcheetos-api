@@ -31,9 +31,9 @@ class GamesManagerTest {
 
         steamPlayer = driver.createPlayer(Platform.Steam)
         xboxPLayer = driver.createPlayer(Platform.Xbox)
+        user = driver.createUser(xbox = xboxPLayer, steam = steamPlayer)
 
         me3 = driver.createGame(Platform.Xbox, "Mass Effect 3")
-        driver.addToLibrary(xboxPLayer, me3)
         me3Achievements = arrayOf(
                 driver.createAchievement(me3, name = "It's a blue alien babe!", description = "Recruit Liara"),
                 driver.createAchievement(me3, name = "The Dinosaurs are extinct", description = "Headbutt a Krogan"),
@@ -41,27 +41,26 @@ class GamesManagerTest {
         )
 
         satisfactory = driver.createGame(platform = Platform.Steam, name = "Satisfactory")
-        driver.addToLibrary(steamPlayer, satisfactory)
         satisfactoryAchievements = arrayOf(
                 driver.createAchievement(satisfactory, name = "Choo!", description = "Build a train locomotive"),
                 driver.createAchievement(satisfactory, name = "3.6 Roentgen", description = "Detonate a nobelisk on a nuclear power plant"),
                 driver.createAchievement(satisfactory, name = "You are feeling very sleepy", description = "Collect a Mercer Sphere")
         )
-
-        user = driver.createUser(displayName = "xxNoobSlayerxx", steamPlayer, xboxPLayer)
     }
 
     // list games
 
     @Test
     fun `list games for missing user`() {
-        val user = User(id = "missingId", displayName = "missingUser")
-        assertThat(testObj.listGames(user, Platform.Steam)).isEmpty()
+        val user = User(id = "missingId", players = emptyMap())
+        assertThat(testObj.listGames(user)).isEmpty()
     }
 
     @Test
     fun `list games`() {
-        assertThat(testObj.listGames(user, Platform.Steam)).containsExactlyInAnyOrder(satisfactory)
+        val owned1 = driver.addToLibrary(xboxPLayer, me3, 0, 3)
+        val owned2 = driver.addToLibrary(steamPlayer, satisfactory, 0, 3)
+        assertThat(testObj.listGames(user)).containsExactlyInAnyOrder(owned1, owned2)
     }
 
     // list achievements
@@ -80,6 +79,7 @@ class GamesManagerTest {
 
     @Test
     fun `list your achievement status`() {
+        driver.addToLibrary(xboxPLayer, me3, 0, 3)
         driver.unlockAchievement(steamPlayer, satisfactory, satisfactoryAchievements[0], Instant.ofEpochSecond(9001))
         driver.unlockAchievement(steamPlayer, satisfactory, satisfactoryAchievements[1], Instant.ofEpochSecond(50000))
 
@@ -95,16 +95,18 @@ class GamesManagerTest {
 
     @Test
     fun `get missing game`() {
-        assertThat(testObj.getGame(Platform.Steam, "missingGame")).isNull()
+        assertThat(testObj.getGame(steamPlayer, "missingGame")).isNull()
     }
 
     @Test
     fun `get game from wrong platform`() {
-        assertThat(testObj.getGame(Platform.Steam, me3.id)).isNull()
+        driver.addToLibrary(steamPlayer, satisfactory, 0, 3)
+        assertThat(testObj.getGame(xboxPLayer, satisfactory.id)).isNull()
     }
 
     @Test
     fun `get game`() {
-        assertThat(testObj.getGame(me3.platform, me3.id)).isEqualTo(me3)
+        val owned = driver.addToLibrary(steamPlayer, satisfactory, 0, 3)
+        assertThat(testObj.getGame(steamPlayer, satisfactory.id)).isEqualTo(owned)
     }
 }

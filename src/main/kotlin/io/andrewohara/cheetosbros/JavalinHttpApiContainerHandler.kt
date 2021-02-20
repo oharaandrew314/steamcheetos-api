@@ -19,16 +19,24 @@ class JavalinHttpApiContainerHandler(
     HttpApiV2ProxyRequest::class.java,
     AwsProxyResponse::class.java,
     AwsHttpApiV2HttpServletRequestReader(),
-    AwsProxyHttpServletResponseWriter(),
+    AwsProxyHttpServletResponseWriter(true),
     AwsHttpApiV2SecurityContextWriter(),
     AwsProxyExceptionHandler()
 ) {
+
+    private var initialized = false
 
     override fun getContainerResponse(request: HttpServletRequest, latch: CountDownLatch): AwsHttpServletResponse {
         return AwsHttpServletResponse(request, latch)
     }
 
-    override fun handleRequest(containerRequest: HttpServletRequest, containerResponse: AwsHttpServletResponse, lambdaContext: Context) {
+    override fun handleRequest(containerRequest: HttpServletRequest, containerResponse: AwsHttpServletResponse, lambdaContext: Context?) {
+        if (!initialized) initialize()
         doFilter(containerRequest, containerResponse, app.servlet())
+    }
+
+    override fun initialize() {
+        super.initialize()
+        initialized = true
     }
 }

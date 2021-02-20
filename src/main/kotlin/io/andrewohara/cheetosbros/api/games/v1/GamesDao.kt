@@ -17,11 +17,6 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
         mapper.save(item)
     }
 
-    fun batchSave(games: Collection<Game>) {
-        val items = games.map { DynamoGame(it) }
-        mapper.batchSave(items)
-    }
-
     operator fun get(platform: Platform, gameId: String): Game? {
         return mapper.load(uuid(platform, gameId))?.toGame()
     }
@@ -30,7 +25,6 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
         val query = ids.map { DynamoGame(uuid = uuid(platform, it)) }
         return mapper.batchLoad(query).map { it.toGame() }
     }
-
 
     @DynamoDBDocument
     data class DynamoGame(

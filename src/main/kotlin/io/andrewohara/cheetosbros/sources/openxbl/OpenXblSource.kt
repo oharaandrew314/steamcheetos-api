@@ -25,31 +25,31 @@ class OpenXblSource(private val apiKey: String): Source {
     private val client = HttpClient.newHttpClient()
     override val platform = Platform.Xbox
 
-    override fun getPlayer(playerId: String): Player? {
-        val request = HttpRequest.newBuilder()
-                .uri(URI.create("$host/account/$playerId"))
-                .header("X-Authorization", apiKey)
-                .header("X-Contract", "100")
-                .GET()
-                .build()
-
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        if (response.statusCode() != 200) {
-            throw IllegalStateException("Request failed: $response")
-        }
-
-        val profile = mapper.readValue(response.body(), GetAccountResponse::class.java)
-                .profileUsers
-                .firstOrNull()
-                ?: return null
-
-        return Player(
-                id = profile.id,
-                platform = platform,
-                username = profile.getGamertag()!!,
-                avatar = profile.getAvatar()
-        )
-    }
+//    override fun getPlayer(playerId: String): Player? {
+//        val request = HttpRequest.newBuilder()
+//                .uri(URI.create("$host/account/$playerId"))
+//                .header("X-Authorization", apiKey)
+//                .header("X-Contract", "100")
+//                .GET()
+//                .build()
+//
+//        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+//        if (response.statusCode() != 200) {
+//            throw IllegalStateException("Request failed: $response")
+//        }
+//
+//        val profile = mapper.readValue(response.body(), GetAccountResponse::class.java)
+//                .profileUsers
+//                .firstOrNull()
+//                ?: return null
+//
+//        return Player(
+//                id = profile.id,
+//                platform = platform,
+//                username = profile.getGamertag()!!,
+//                avatar = profile.getAvatar()
+//        )
+//    }
 
     override fun library(playerId: String): Collection<Game> {
         val request = HttpRequest.newBuilder()

@@ -92,7 +92,7 @@ class SteamSource(private val apiKey: String): Source {
                 ?: emptyList()
     }
 
-    override fun getPlayer(playerId: String): Player? {
+    fun getPlayer(playerId: String): Player? {
         val request = HttpRequest.newBuilder()
                 .uri("ISteamUser","GetPlayerSummaries", 2, params = mapOf("steamids" to playerId))
                 .GET()
@@ -116,7 +116,8 @@ class SteamSource(private val apiKey: String): Source {
                             id = it.steamid,
                             platform = platform,
                             username = it.personaname,
-                            avatar = it.avatarfull
+                            avatar = it.avatarfull,
+                            token = null
                     )
                 }
     }

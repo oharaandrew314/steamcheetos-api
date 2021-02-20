@@ -1,6 +1,7 @@
 package io.andrewohara.cheetosbros.sources
 
 import io.andrewohara.cheetosbros.api.ApiTestDriver
+import io.andrewohara.cheetosbros.api.games.v1.OwnedGame
 import org.assertj.core.api.Assertions.*
 import org.junit.Before
 import org.junit.Rule
@@ -42,7 +43,10 @@ class SourceManagerTest {
 
         testObj.sync(player, sourceDriver.source(player))
 
-        assertThat(apiDriver.gameLibraryDao.listGameIds(player)).containsExactlyInAnyOrder(game1.id, game2.id)
+        assertThat(apiDriver.gameLibraryDao[player]).containsExactlyInAnyOrder(
+            OwnedGame(game1.platform, game1.id, game1.name, game1.displayImage, 0, 1),
+            OwnedGame(game2.platform, game2.id, game2.name, game2.displayImage, 0, 1)
+        )
         assertThat(apiDriver.gamesDao.batchGet(player.platform, listOf(game1.id, game2.id))).containsExactlyInAnyOrder(game1, game2)
         assertThat(apiDriver.achievementsDao[game1]).containsExactly(game1Achievement)
         assertThat(apiDriver.achievementsDao[game2]).containsExactly(game2Achievement)
@@ -78,7 +82,9 @@ class SourceManagerTest {
         testObj.sync(player, sourceDriver.source(player))
 
         assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
-        assertThat(apiDriver.gameLibraryDao.listGameIds(player)).containsExactly(game.id)
+        assertThat(apiDriver.gameLibraryDao[player]).containsExactly(
+            OwnedGame(game.platform, game.id, game.name, game.displayImage, 0, 0)
+        )
         assertThat(apiDriver.achievementsDao[game]).isEmpty()
     }
 }

@@ -7,12 +7,22 @@ Parameters:
     Type: String
   SteamApiKeySsmName:
     Type: String
-#  CertificateArn:
-#    Type: String
-#  DomainName:
-#    Type: String
+  FrontendHost:
+    Type: String
 
 Resources:
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowCredentials: true
+        AllowHeaders: [ Authorization ]
+        AllowMethods: [ GET, POST ]
+        AllowOrigins: [ !Ref FrontendHost ]
+        ExposeHeaders: [ '*' ]
+      DisableExecuteApiEndpoint: true
+
+
   ApiHandler:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -26,32 +36,31 @@ Resources:
           ACHIEVEMENTS_TABLE: !Ref Achievements
           ACHIEVEMENT_STATUS_TABLE: !Ref AchievementStatus
           USERS_TABLE: !Ref Users
-          PLAYERS_TABLE: !Ref Players
+          SOCIAL_LINK_TABLE: !Ref SocialLinks
           LIBRARY_TABLE: !Ref GameLibrary
           STEAM_API_KEY_NAME: !Ref SteamApiKeySsmName
           PRIVATE_PEM_NAME: !Ref PrivatePemSsmName
           PUBLIC_PEM_NAME: !Ref PublicPemSsmName
+          FRONTEND_HOST: !Ref FrontendHost
           PEM_ISSUER: !Ref AWS::StackName
-
       Events:
         HttpApiEvent:
           Type: HttpApi
-#          Properties:
-#            PayloadFormatVersion: '1.0'
-  #          ApiId: !Ref Api
+          Properties:
+            ApiId: !Ref Api
       Policies:
         - DynamoDBCrudPolicy:
-           TableName: !GetAtt Users.Arn
+           TableName: !Ref Users
         - DynamoDBCrudPolicy:
-           TableName: !GetAtt Games.Arn
+           TableName: !Ref Games
         - DynamoDBCrudPolicy:
-           TableName: !GetAtt Achievements.Arn
+           TableName: !Ref Achievements
         - DynamoDBCrudPolicy:
-           TableName: !GetAtt GameLibrary.Arn
+           TableName: !Ref GameLibrary
         - DynamoDBCrudPolicy:
-           TableName: !GetAtt AchievementStatus.Arn
+           TableName: !Ref AchievementStatus
         - DynamoDBCrudPolicy:
-            TableName: !GetAtt Players.Arn
+            TableName: !Ref SocialLinks
         - Version: "2012-10-17"
           Statement:
             - Sid: "ssm"
@@ -64,14 +73,6 @@ Resources:
                 - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PrivatePemSsmName}
                 - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PublicPemSsmName}
                 - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SteamApiKeySsmName}
-
-#  Api:
-#    Type: AWS::Serverless::HttpApi
-#    Properties:
-#      DisableExecuteApiEndpoint: true
-#      Domain:
-#        CertificateArn: !Ref CertificateArn
-#        DomainName: !Ref DomainName
 
   Users:
     Type: AWS::DynamoDB::Table
@@ -140,22 +141,13 @@ Resources:
         - AttributeName: achievementId
           KeyType: RANGE
 
-  Players:
+  SocialLinks:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: uuid
-          AttributeType: S
-        - AttributeName: userId
+        - AttributeName: playerUuid
           AttributeType: S
       KeySchema:
-        - AttributeName: uuid
+        - AttributeName: playerUuid
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: users
-          KeySchema:
-            - AttributeName: userId
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL

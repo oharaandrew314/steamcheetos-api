@@ -2,13 +2,9 @@ package io.andrewohara.cheetosbros.api.auth.openxbl
 
 import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.CheetosRole
-import io.andrewohara.cheetosbros.api.users.User
-import io.andrewohara.cheetosbros.api.users.UsersManager
 import io.javalin.Javalin
 import io.javalin.core.security.SecurityUtil
-import io.javalin.http.BadRequestResponse
 import io.javalin.http.Context
-import java.lang.IllegalStateException
 
 class OpenXblAuthController(publicAppKey: String, private val authManager: AuthManager) {
 
@@ -28,9 +24,9 @@ class OpenXblAuthController(publicAppKey: String, private val authManager: AuthM
 
     private fun callback(ctx: Context) {
         val code = ctx.queryParam<String>("code").get()
-        val (player, token) = openXblAuth.verify(code)
+        val player = openXblAuth.verify(code)
 
-        authManager.login(ctx, player, token)
+        authManager.login(ctx, player)
 
         ctx.redirect(frontendRedirectUrl)
     }

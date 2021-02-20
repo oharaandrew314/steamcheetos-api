@@ -11,7 +11,7 @@ class FakeSource(override val platform: Platform): Source {
     private val achievements = mutableMapOf<Game, MutableSet<Achievement>>()
     private val userAchievements = mutableMapOf<Pair<Game, Player>, MutableSet<AchievementStatus>>()
 
-    override fun getPlayer(playerId: String): Player? {
+    private fun getPlayer(playerId: String): Player? {
         return players[playerId]
     }
 

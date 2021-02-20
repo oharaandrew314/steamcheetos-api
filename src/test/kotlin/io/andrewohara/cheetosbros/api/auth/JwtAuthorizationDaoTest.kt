@@ -12,7 +12,7 @@ class JwtAuthorizationDaoTest {
 
     @Test
     fun `resolve valid token`() {
-        val user = User(id = "1337", displayName = "leet user")
+        val user = User(id = "1337", emptyMap())
 
         val token = driver.authorizationDao.assignToken(user)
 

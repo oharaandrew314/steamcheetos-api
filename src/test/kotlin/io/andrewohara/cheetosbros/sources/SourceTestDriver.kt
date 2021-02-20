@@ -32,7 +32,8 @@ class SourceTestDriver: ExternalResource() {
             id = id,
             avatar = null,
             platform = platform,
-            username = displayName ?: "player-$id"
+            username = displayName ?: "player-$id",
+            token = null
         )
         platform.source().addPlayer(player)
         return player

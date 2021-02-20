@@ -15,7 +15,6 @@ class GamesControllerV1(private val gamesManager: GamesManager) {
         JavalinValidation.register(Platform::class.java, Platform::valueOf)
 
         app.get("/v1/games", ::listGames, roles(CheetosRole.User))
-        app.get("/v1/games/:platform", ::listGamesForPlatform, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id", ::getGame, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id/achievements", ::listAchievements, roles(CheetosRole.User))
         app.get("/v1/games/:platform/:game_id/achievements/status", ::listAchievementStatus, roles(CheetosRole.User))
@@ -29,20 +28,14 @@ class GamesControllerV1(private val gamesManager: GamesManager) {
         ctx.json(games)
     }
 
-    private fun listGamesForPlatform(ctx: Context) {
-        val user = ctx.attribute<User>("user")!!
-        val platform = ctx.pathParam<Platform>("platform").get()
-
-        val games = gamesManager.listGames(user, platform)
-
-        ctx.json(games)
-    }
-
     private fun getGame(ctx: Context) {
+        val user = ctx.attribute<User>("user")!!
+
         val platform = ctx.pathParam<Platform>("platform").get()
         val gameId = ctx.pathParam("game_id")
 
-        val game = gamesManager.getGame(platform, gameId) ?: throw NotFoundResponse()
+        val player = user.players[platform] ?: throw NotFoundResponse("User does not have a $platform player")
+        val game = gamesManager.getGame(player, gameId) ?: throw NotFoundResponse()
 
         ctx.json(game)
     }

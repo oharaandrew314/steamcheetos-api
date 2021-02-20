@@ -15,7 +15,7 @@ import java.util.*
 class ApiTestDriver: ExternalResource() {
 
     // Daos
-    private lateinit var playersDao: PlayersDao
+    private lateinit var socialLinkDao: SocialLinkDao
     private lateinit var usersDao: UsersDao
     lateinit var gamesDao: GamesDao
     lateinit var achievementsDao: AchievementsDao
@@ -25,7 +25,6 @@ class ApiTestDriver: ExternalResource() {
 
     // Managers
     lateinit var gamesManager: GamesManager
-    lateinit var usersManager: UsersManager
 
     // Config
     private lateinit var time: Instant
@@ -35,45 +34,48 @@ class ApiTestDriver: ExternalResource() {
 
         time = Instant.parse("2020-01-01T00:00:00Z")
 
-        playersDao = PlayersDao("players", dynamoDb)
-        playersDao.mapper.createTable(ProvisionedThroughput(1, 1))
+        socialLinkDao = DynamoSocialLinkDao(dynamoDb, "social-links").apply {
+            mapper.createTable(ProvisionedThroughput(1, 1))
+        }
 
-        usersDao = UsersDao("users", dynamoDb)
-        usersDao.mapper.createTable(ProvisionedThroughput(1, 1))
+        usersDao = UsersDao("users", dynamoDb).apply {
+            mapper.createTable(ProvisionedThroughput(1, 1))
+        }
 
-        gamesDao = GamesDao("games", dynamoDb)
-        gamesDao.mapper.createTable(ProvisionedThroughput(1, 1))
+        gamesDao = GamesDao("games", dynamoDb).apply {
+            mapper.createTable(ProvisionedThroughput(1, 1))
+        }
 
-        achievementsDao = AchievementsDao("achievements", dynamoDb)
-        achievementsDao.mapper.createTable(ProvisionedThroughput(1, 1))
+        achievementsDao = AchievementsDao("achievements", dynamoDb).apply {
+            mapper.createTable(ProvisionedThroughput(1, 1))
+        }
 
-        gameLibraryDao = GameLibraryDao("user-games", dynamoDb)
-        gameLibraryDao.mapper.createTable(ProvisionedThroughput(1, 1))
+        gameLibraryDao = GameLibraryDao("user-games", dynamoDb).apply {
+            mapper.createTable(ProvisionedThroughput(1, 1))
+        }
 
-        achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb)
-        achievementStatusDao.mapper.createTable(ProvisionedThroughput(1, 1))
+        achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb).apply {
+            mapper.createTable(ProvisionedThroughput(1, 1))
+        }
 
         authorizationDao = JwtAuthorizationDao(
                 issuer = "cheetosbros-test",
                 privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
-                publicKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test-pub.pem")!!)!!,
-                playersDao = playersDao
+                publicKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test-pub.pem")!!)!!
         )
 
-        gamesManager = GamesManager(playersDao, gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao)
-        usersManager = UsersManager(usersDao, playersDao)
+        gamesManager = GamesManager(gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao)
     }
 
     fun createPlayer(platform: Platform, displayName: String? = null): Player {
         val id = UUID.randomUUID().toString()
-        val player = Player(
+        return Player(
                 id = id,
                 avatar = null,
                 platform = platform,
-                username = displayName ?: "player-$id"
+                username = displayName ?: "player-$id",
+                token = null
         )
-        playersDao.save(player)
-        return player
     }
 
     fun createGame(platform: Platform, name: String? = null): Game {
@@ -117,22 +119,30 @@ class ApiTestDriver: ExternalResource() {
         return status
     }
 
-    fun addToLibrary(player: Player, game: Game) {
-        gameLibraryDao.batchSave(player, listOf(game))
+    fun addToLibrary(player: Player, game: Game, completed: Int, total: Int): OwnedGame {
+        val ownedGame = OwnedGame(
+            platform = game.platform,
+            id = game.id,
+            name = game.name,
+            displayImage = game.displayImage,
+            currentAchievements = completed,
+            totalAchievements = total
+        )
+        gameLibraryDao.save(player, ownedGame)
+        return ownedGame
     }
 
-    fun createUser(displayName: String? = null, xbox: Player? = null, steam: Player? = null): User {
-        val id = UUID.randomUUID().toString()
+    fun createUser(xbox: Player? = null, steam: Player? = null): User {
+        val players = mutableMapOf<Platform, Player>()
+        if (xbox != null) players[xbox.platform] = xbox
+        if (steam != null) players[steam.platform] = steam
+
         val user = User(
-                id = id,
-                displayName = displayName ?: "user-$id",
-                openxblToken = if (xbox != null) "token" else null
+                id = UUID.randomUUID().toString(),
+                players = players
         )
+
         usersDao.save(user)
-
-        if (xbox != null) playersDao.linkUser(xbox, user)
-        if (steam != null) playersDao.linkUser(steam, user)
-
         return user
     }
 }

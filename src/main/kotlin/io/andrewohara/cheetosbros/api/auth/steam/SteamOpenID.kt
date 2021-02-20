@@ -1,15 +1,12 @@
 package io.andrewohara.cheetosbros.api.auth.steam
 
-import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
-import io.andrewohara.cheetosbros.sources.Source
+import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import org.openid4java.consumer.ConsumerManager
-import org.openid4java.discovery.DiscoveryInformation
 import org.openid4java.message.ParameterList
 import java.util.regex.Pattern
 
-
-class SteamOpenID(private val steamApi: Source) {
+class SteamOpenID(private val steamApi: SteamSource) {
     companion object {
         private const val STEAM_OPENID = "http://steamcommunity.com/openid"
         private val STEAM_REGEX = Pattern.compile("(\\d+)")
@@ -19,7 +16,9 @@ class SteamOpenID(private val steamApi: Source) {
         maxAssocAttempts = 0
     }
 
-    private var discovered: DiscoveryInformation = manager.associate(manager.discover(STEAM_OPENID))
+    private val discovered by lazy {
+        manager.associate(manager.discover(STEAM_OPENID))
+    }
 
     /**
      * Generate a steam login URL
@@ -43,13 +42,6 @@ class SteamOpenID(private val steamApi: Source) {
         if (!matcher.find()) return null
 
         val steamId64 = matcher.group(1)
-        val userProfile = steamApi.getPlayer(steamId64) ?: return null
-
-        return Player(
-                platform = Platform.Steam,
-                id = steamId64,
-                username = userProfile.username,
-                avatar = userProfile.avatar
-        )
+        return steamApi.getPlayer(steamId64)
     }
 }

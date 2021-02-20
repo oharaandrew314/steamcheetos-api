@@ -4,10 +4,8 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.exceptions.InvalidClaimException
 import com.auth0.jwt.exceptions.JWTDecodeException
-import io.andrewohara.cheetosbros.api.users.PlayersDao
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.PemUtils
-import io.andrewohara.cheetosbros.sources.Platform
 import org.bouncycastle.util.io.pem.PemObject
 import org.slf4j.LoggerFactory
 import java.security.interfaces.ECPrivateKey
@@ -19,7 +17,7 @@ interface AuthorizationDao {
     fun assignToken(user: User): String
 }
 
-class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, publicKey: PemObject, private val playersDao: PlayersDao): AuthorizationDao {
+class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, publicKey: PemObject): AuthorizationDao {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -51,19 +49,14 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, pub
     }
 
     override fun assignToken(user: User): String {
-        val players = playersDao.listForUser(user)
-        val steamPlayer = players.firstOrNull { it.platform == Platform.Steam }
-        val xboxPlayer = players.firstOrNull { it.platform == Platform.Xbox }
-        val avatar = players.mapNotNull { it.avatar }.firstOrNull()
+        val avatar = user.players.values
+            .map { it.avatar }
+            .firstOrNull()
 
         val builder = JWT.create().apply {
             withIssuer(issuer)
             withSubject(user.id)
-            withClaim("displayName", user.displayName)
-            withClaim("xboxUsername", xboxPlayer?.username)
-            withClaim("xboxId", xboxPlayer?.id)
-            withClaim("steamUsername", steamPlayer?.username)
-            withClaim("steamId", steamPlayer?.id)
+            withClaim("displayName", user.displayName())
             withClaim("avatar", avatar)
         }
 

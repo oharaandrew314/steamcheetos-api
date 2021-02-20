@@ -17,7 +17,7 @@ class OpenXblAuth(private val publicAppKey: String) {
 
     fun getLoginUrl() = "https://xbl.io/app/auth/$publicAppKey"
 
-    fun verify(code: String): Pair<Player, String> {
+    fun verify(code: String): Player {
         val payload = """{"code": "$code", "app_key": "$publicAppKey"}"""
 
         val request = HttpRequest
@@ -35,14 +35,13 @@ class OpenXblAuth(private val publicAppKey: String) {
 
         val result = mapper.readValue(response.body(), OpenXblAuthResult::class.java)
 
-        val player = Player(
+        return Player(
                 platform = Platform.Xbox,
                 id = result.xuid,
                 username = result.gamertag,
-                avatar = result.avatar
+                avatar = result.avatar,
+                token = result.app_key
         )
-
-        return player to result.app_key
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
