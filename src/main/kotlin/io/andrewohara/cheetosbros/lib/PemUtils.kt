@@ -6,7 +6,6 @@ import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
-import java.security.cert.CertificateFactory
 
 import java.util.*
 import java.util.regex.Pattern
@@ -15,7 +14,6 @@ import java.util.regex.Pattern
 class PemUtils(algorithm: String) {
 
     private val kf = KeyFactory.getInstance(algorithm)
-    private val cf = CertificateFactory.getInstance("X.509")
 
     fun getPublicKey(key: ByteArray): PublicKey? {
         val keySpec = X509EncodedKeySpec(key)
