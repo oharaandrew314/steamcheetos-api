@@ -1,7 +1,6 @@
 package io.andrewohara.cheetosbros.sources.steam
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.squareup.moshi.Moshi
 import io.andrewohara.cheetosbros.sources.*
 import java.io.IOException
 import java.lang.IllegalStateException
@@ -17,8 +16,8 @@ import java.time.Instant
 class SteamSource(private val apiKey: String): Source {
     companion object {
         private const val host = "https://api.steampowered.com"
-        private val mapper = jacksonObjectMapper()
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+
+        private val mapper = Moshi.Builder().build()
     }
 
     override val platform = Platform.Steam
@@ -36,7 +35,7 @@ class SteamSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        return mapper.readValue(response.body(), GetOwnedGamesResponse::class.java)
+        return mapper.adapter(GetOwnedGamesResponse::class.java).fromJson(response.body())!!
                 .response
                 .games
                 .map { game -> Game(
@@ -58,7 +57,7 @@ class SteamSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        return mapper.readValue(response.body(), GetSchemaForGameResponse::class.java)
+        return mapper.adapter(GetSchemaForGameResponse::class.java).fromJson(response.body())!!
                 .game
                 .availableGameStats
                 ?.achievements
@@ -85,7 +84,7 @@ class SteamSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        return mapper.readValue(response.body(), GetPlayerAchievementsResponse::class.java)
+        return mapper.adapter(GetPlayerAchievementsResponse::class.java).fromJson(response.body())!!
                 .playerstats
                 .achievements
                 ?.map { AchievementStatus(achievementId = it.apiname, unlockedOn = if (it.unlocktime > 0) Instant.ofEpochSecond(it.unlocktime) else null) }
@@ -105,7 +104,7 @@ class SteamSource(private val apiKey: String): Source {
             else -> throw IOException("Request failed: $response")
         }
 
-        val responseBody =  mapper.readValue(response.body(), GetPlayerSummariesResponse::class.java)
+        val responseBody =  mapper.adapter(GetPlayerSummariesResponse::class.java).fromJson(response.body())!!
 
         return responseBody
                 .response
@@ -133,7 +132,7 @@ class SteamSource(private val apiKey: String): Source {
             throw IllegalStateException("Request failed: $response")
         }
 
-        val responseBody = mapper.readValue(response.body(), GetFriendListResponse::class.java)
+        val responseBody = mapper.adapter(GetFriendListResponse::class.java).fromJson(response.body())!!
 
         return responseBody.friendslist.friends.map { it.steamid }
     }

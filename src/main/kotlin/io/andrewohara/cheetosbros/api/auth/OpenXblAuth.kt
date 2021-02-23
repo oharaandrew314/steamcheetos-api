@@ -1,7 +1,6 @@
 package io.andrewohara.cheetosbros.api.auth
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.squareup.moshi.Moshi
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
 import java.io.IOException
@@ -13,7 +12,7 @@ import java.net.http.HttpResponse
 class OpenXblAuth(private val publicAppKey: String) {
 
     private val client = HttpClient.newHttpClient()
-    private val mapper = jacksonObjectMapper()
+    private val adapter = Moshi.Builder().build().adapter(OpenXblAuthResult::class.java)
 
     fun getLoginUrl() = "https://xbl.io/app/auth/$publicAppKey"
 
@@ -33,7 +32,7 @@ class OpenXblAuth(private val publicAppKey: String) {
             throw IOException("Error authorizing request: ${response.body()}")
         }
 
-        val result = mapper.readValue(response.body(), OpenXblAuthResult::class.java)
+        val result = adapter.fromJson(response.body())!!
 
         return Player(
                 platform = Platform.Xbox,
@@ -44,7 +43,6 @@ class OpenXblAuth(private val publicAppKey: String) {
         )
     }
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
     private data class OpenXblAuthResult(
             val xuid: String,
             val gamertag: String,

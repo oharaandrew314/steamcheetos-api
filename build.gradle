@@ -10,7 +10,6 @@ repositories {
 ext {
     ver = [
             slf4j: '1.7.30',
-            jackson: '2.12.0',
             aws: '1.11.954'
     ]
 }
@@ -20,8 +19,7 @@ dependencies {
     implementation "com.sparkjava:spark-core:2.9.3"
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.1'
     implementation 'com.amazonaws.serverless:aws-serverless-java-container-spark:1.5.2'
-    implementation group: 'com.fasterxml.jackson.module', name: 'jackson-module-kotlin', version: ver.jackson
-    implementation group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: ver.jackson
+    implementation "com.squareup.moshi:moshi:1.11.0"
     implementation group: 'org.openid4java', name: 'openid4java', version: '1.0.0'
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
     implementation "com.amazonaws:aws-java-sdk-dynamodb:${ver.aws}"
