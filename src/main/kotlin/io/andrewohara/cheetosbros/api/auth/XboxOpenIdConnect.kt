@@ -1,4 +1,4 @@
-package io.andrewohara.cheetosbros.api.auth.xbox
+package io.andrewohara.cheetosbros.api.auth
 
 
 //import com.microsoft.aad.msal4j.*

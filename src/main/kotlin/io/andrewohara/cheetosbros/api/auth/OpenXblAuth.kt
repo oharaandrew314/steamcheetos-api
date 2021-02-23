@@ -1,4 +1,4 @@
-package io.andrewohara.cheetosbros.api.auth.openxbl
+package io.andrewohara.cheetosbros.api.auth
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper

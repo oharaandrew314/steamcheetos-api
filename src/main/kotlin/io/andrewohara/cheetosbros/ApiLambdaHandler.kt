@@ -57,7 +57,7 @@ class ApiLambdaHandler: RequestStreamHandler {
         private val handler = SparkLambdaContainerHandler.getHttpApiV2ProxyHandler()
 
         init {
-            builder.startSpark()
+            builder.startSpark(decodeQueryParams = true)
         }
     }
 

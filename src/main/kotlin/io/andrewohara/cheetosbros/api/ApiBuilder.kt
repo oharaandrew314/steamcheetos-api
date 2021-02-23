@@ -1,23 +1,15 @@
 package io.andrewohara.cheetosbros.api
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import io.andrewohara.cheetosbros.api.auth.AuthManager
-import io.andrewohara.cheetosbros.api.auth.CheetosRole
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
-import io.andrewohara.cheetosbros.api.auth.steam.SteamAuthController
-import io.andrewohara.cheetosbros.api.auth.steam.SteamOpenID
+import io.andrewohara.cheetosbros.api.auth.SteamOpenID
 import io.andrewohara.cheetosbros.api.games.v1.*
 import io.andrewohara.cheetosbros.api.users.DynamoSocialLinkDao
 import io.andrewohara.cheetosbros.api.users.UsersDao
 import io.andrewohara.cheetosbros.lib.PemUtils
 import io.andrewohara.cheetosbros.sources.*
 import io.andrewohara.cheetosbros.sources.steam.SteamSource
-import io.javalin.Javalin
-import io.javalin.core.JavalinConfig
-import io.javalin.core.security.SecurityUtil
-import io.javalin.core.validation.JavalinValidation
-import io.javalin.plugin.json.JavalinJackson
 import spark.Spark
 
 class ApiBuilder(
@@ -51,28 +43,12 @@ class ApiBuilder(
         AuthManager(authorizationDao, usersDao, socialLinkDao)
     }
 
-    fun updateConfig(config: JavalinConfig) {
-        config.accessManager(authManager)
-//        config.enableCorsForAllOrigins()
-
-        JavalinJackson.getObjectMapper().registerModule(JavaTimeModule())
-        JavalinValidation.register(Platform::class.java, Platform::valueOf)
-    }
-
-    fun registerController(app: Javalin) {
-        app.get("/health", { it.result("ok") }, SecurityUtil.roles(CheetosRole.Public))
-
-        SteamAuthController(steamSource, authManager).register(app)
-        GamesControllerV1(gamesManager).register(app)
-        SyncApiV1(app, syncManager)
-    }
-
-    fun startSpark(port: Int? = null, cors: Boolean = false) {
+    fun startSpark(port: Int? = null, cors: Boolean = false, decodeQueryParams: Boolean) {
         if (port != null) {
             Spark.port(port)
         }
 
-        SparkApi(gamesManager, authManager, steamOpenId, syncManager, frontendHost)
+        SparkApi(gamesManager, authManager, steamOpenId, syncManager, frontendHost, decodeQueryParams)
 
         if (cors) {
             Spark.after(SparkCorsFilter(frontendHost))

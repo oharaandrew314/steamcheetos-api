@@ -1,4 +1,4 @@
-package io.andrewohara.cheetosbros.api.auth.steam
+package io.andrewohara.cheetosbros.api.auth
 
 import io.andrewohara.cheetosbros.sources.Player
 import io.andrewohara.cheetosbros.sources.steam.SteamSource

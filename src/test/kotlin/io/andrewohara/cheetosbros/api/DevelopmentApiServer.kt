@@ -21,7 +21,7 @@ object DevelopmentApiServer {
             privateKey = Paths.get(System.getenv("PRIVATE_PEM_PATH")).readText(),
             publicKey = Paths.get(System.getenv("PUBLIC_PEM_PATH")).readText(),
             publicKeyIssuer = "cheetosbros-localhost",
-            frontendHost = System.getenv("FRONTEND_HOST")
+            frontendHost = "http://localhost:3000"
         )
 
 //        val app = Javalin.create {
@@ -31,6 +31,6 @@ object DevelopmentApiServer {
 //        app.start(8000)
 
 
-        builder.startSpark(8000, cors = true)
+        builder.startSpark(8000, cors = true, decodeQueryParams = false)
     }
 }

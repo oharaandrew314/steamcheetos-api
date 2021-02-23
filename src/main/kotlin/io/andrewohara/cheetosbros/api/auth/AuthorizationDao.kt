@@ -6,7 +6,6 @@ import com.auth0.jwt.exceptions.InvalidClaimException
 import com.auth0.jwt.exceptions.JWTDecodeException
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.PemUtils
-import org.bouncycastle.util.io.pem.PemObject
 import org.slf4j.LoggerFactory
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
@@ -17,7 +16,7 @@ interface AuthorizationDao {
     fun assignToken(user: User): String
 }
 
-class JwtAuthorizationDao(private val issuer: String, privateKey: PemObject, publicKey: PemObject): AuthorizationDao {
+class JwtAuthorizationDao(private val issuer: String, privateKey: ByteArray, publicKey: ByteArray): AuthorizationDao {
 
     private val log = LoggerFactory.getLogger(javaClass)
 

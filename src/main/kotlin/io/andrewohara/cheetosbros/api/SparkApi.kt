@@ -1,7 +1,7 @@
 package io.andrewohara.cheetosbros.api
 
 import io.andrewohara.cheetosbros.api.auth.AuthManager
-import io.andrewohara.cheetosbros.api.auth.steam.SteamOpenID
+import io.andrewohara.cheetosbros.api.auth.SteamOpenID
 import io.andrewohara.cheetosbros.api.games.v1.GamesManager
 import io.andrewohara.cheetosbros.api.games.v1.OwnedGame
 import io.andrewohara.cheetosbros.api.users.User
@@ -21,14 +21,15 @@ class SparkApi(
     private val authManager: AuthManager,
     private val steamOpenId: SteamOpenID,
     private val sourceManger: SourceManager,
-    private val frontendHost: String
+    private val frontendHost: String,
+    private val decodeQueryParams: Boolean
     ) {
 
     init {
         before(authManager)
 
-        //health
-        get("/health") { _, _ -> "OK" }
+        options("/*") { _, _ -> "OK" }  // cors
+        get("/health") { _, _ -> "OK" }  //health
 
         // games
         get("/v1/games", ::listGames)
@@ -93,20 +94,17 @@ class SparkApi(
         val user = request.attribute<User>("user")
 
         val params = mapOf(
-            "openid.return_to" to request.decodeQueryParam("openid.return_to"),
-            "openid.identity" to request.decodeQueryParam("openid.identity"),
-            "openid.op_endpoint" to request.decodeQueryParam("openid.op_endpoint"),
-            "openid.assoc_handle" to request.decodeQueryParam("openid.assoc_handle"),
-            "openid.mode" to request.decodeQueryParam("openid.mode"),
-            "openid.signed" to request.decodeQueryParam("openid.signed"),
-            "openid.sig" to request.decodeQueryParam("openid.sig"),
-            "openid.claimed_id" to request.decodeQueryParam("openid.claimed_id"),
-            "openid.response_nonce" to request.decodeQueryParam("openid.response_nonce"),
-            "openid.ns" to request.decodeQueryParam("openid.ns")
+            "openid.return_to" to request.param("openid.return_to"),
+            "openid.identity" to request.param("openid.identity"),
+            "openid.op_endpoint" to request.param("openid.op_endpoint"),
+            "openid.assoc_handle" to request.param("openid.assoc_handle"),
+            "openid.mode" to request.param("openid.mode"),
+            "openid.signed" to request.param("openid.signed"),
+            "openid.sig" to request.param("openid.sig"),
+            "openid.claimed_id" to request.param("openid.claimed_id"),
+            "openid.response_nonce" to request.param("openid.response_nonce"),
+            "openid.ns" to request.param("openid.ns")
         )
-
-        println("foo")
-        println(params)
 
         val player = steamOpenId.verifyResponse(request.url(), params) ?: throw halt(401)
 
@@ -128,5 +126,9 @@ class SparkApi(
         throw halt(404, "Invalid platform: $this")
     }
 
-    private fun Request.decodeQueryParam(param: String) = URLDecoder.decode(queryParams(param), Charsets.UTF_8)
+    private fun Request.param(param: String) = if (decodeQueryParams) {
+        URLDecoder.decode(queryParams(param), Charsets.UTF_8)
+    } else {
+        queryParams(param)
+    }
 }
