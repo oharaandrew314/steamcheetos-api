@@ -7,23 +7,11 @@ import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
 import io.andrewohara.cheetosbros.api.ApiBuilder
-import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 
 
 class ApiLambdaHandler: RequestStreamHandler {
-
-
-
-//    private val handler = let {
-//        val app = Javalin.createStandalone { config ->
-//            builder.updateConfig(config)
-//        }
-//        builder.registerController(app)
-//
-//        JavalinHttpApiContainerHandler(app)
-//    }
 
     companion object {
         private val builder = let {
@@ -50,6 +38,7 @@ class ApiLambdaHandler: RequestStreamHandler {
                 privateKey = params.first { it.name == privatePemName }.value,
                 publicKey = params.first { it.name == publicPemName }.value,
                 publicKeyIssuer = System.getenv("PEM_ISSUER"),
+                syncQueueUrl = System.getenv("SYNC_QUEUE_URL"),
                 frontendHost = System.getenv("FRONTEND_HOST")
             )
         }
@@ -62,15 +51,6 @@ class ApiLambdaHandler: RequestStreamHandler {
     }
 
     override fun handleRequest(input: InputStream, output: OutputStream, context: Context) {
-        val request = input.reader().readText()
-        context.logger.log(request)
-
-        val response = ByteArrayOutputStream()
-
-        handler.proxyStream(request.byteInputStream(), response, context)
-
-        context.logger.log(response.toString())
-
-        output.write(response.toByteArray())
+        handler.proxyStream(input, output, context)
     }
 }

@@ -2,46 +2,34 @@ package io.andrewohara.cheetosbros.sources
 
 import io.andrewohara.cheetosbros.api.games.v1.*
 import org.slf4j.LoggerFactory
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
+import java.lang.IllegalArgumentException
 
 class SourceManager(
     private val sourceFactory: SourceFactory,
     private val gamesDao: GamesDao,
     private val gameLibraryDao: GameLibraryDao,
     private val achievementsDao: AchievementsDao,
-    private val achievementStatusDao: AchievementStatusDao,
-    private val syncExecutor: Executor = Executors.newSingleThreadExecutor()
+    private val achievementStatusDao: AchievementStatusDao
     ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun sync(player: Player) {
-        val source = sourceFactory[player] ?: let {
-            log.warn("No ${player.platform} source found for ${player.username}")
-            return
-        }
+    fun discoverGames(player: Player): Collection<Game> {
+        log.info("Action=DiscoverGames Player=${player.uid()}")
 
-        sync(player, source)
-    }
-
-    fun sync(player: Player, source: Source) {
-        log.info("Action=SyncPlayerStart Player=${player.platform}-${player.username}")
+        val source = sourceFactory[player] ?: throw IllegalArgumentException("No source found for player: ${player.username}")
 
         val games = source.library(player.id)
 
-        for (game in games) {
-            syncExecutor.execute {
-                syncGame(source, player, game)
-                Thread.sleep(1000)
-            }
-        }
+        log.info("Action=DiscoverGames Player=${player.uid()} Games=${games.size}")
 
-        log.info("Action=SyncPlayerComplete Player=${player.platform}-${player.username} Games=${games.size}")
+        return games
     }
 
-    private fun syncGame(source: Source, player: Player, game: Game) {
-        log.debug("Action=SyncGameStart Player=${player.platform}-${player.username} Game=${game.platform}-${game.id}")
+    fun syncGame(player: Player, game: Game) {
+        log.debug("Action=SyncGameStart Player=${player.uid()} Game=${game.uid()}")
+
+        val source = sourceFactory[player] ?: throw IllegalArgumentException("No source found for player: ${player.username}")
 
         val existingGame = gamesDao[game.platform, game.id]
         val numAchievements = if (existingGame == null) {
@@ -60,6 +48,6 @@ class SourceManager(
 
         gameLibraryDao.save(player, OwnedGame(game.platform, game.id, game.name, currentAchievements = numCompleted, totalAchievements = numAchievements, displayImage = game.displayImage))
 
-        log.debug("Action=SyncGameComplete Player=${player.platform}-${player.username} Game=${game.platform}-${game.id} Achievements=$numAchievements")
+        log.debug("Action=SyncGameComplete Player=${player.uid()} Game=${game.uid()} Achievements=$numAchievements")
     }
 }

@@ -23,7 +23,6 @@ class SourceManagerTest {
             gameLibraryDao = apiDriver.gameLibraryDao,
             achievementsDao = apiDriver.achievementsDao,
             achievementStatusDao = apiDriver.achievementStatusDao,
-            syncExecutor = { command -> command.run() }
         )
     }
 
@@ -41,7 +40,8 @@ class SourceManagerTest {
 
         sourceDriver.createGame(Platform.Steam)
 
-        testObj.sync(player, sourceDriver.source(player))
+        testObj.syncGame(player, game1)
+        testObj.syncGame(player, game2)
 
         assertThat(apiDriver.gameLibraryDao[player]).containsExactlyInAnyOrder(
             OwnedGame(game1.platform, game1.id, game1.name, game1.displayImage, 0, 1),
@@ -62,7 +62,7 @@ class SourceManagerTest {
         val achievement2 = sourceDriver.createAchievement(game, "Complete the Game")
         val status1 = sourceDriver.unlockAchievement(player, game, achievement1, Instant.ofEpochSecond(1000))
 
-        testObj.sync(player, sourceDriver.source(player))
+        testObj.syncGame(player, game)
 
         assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
         assertThat(apiDriver.achievementsDao[game]).containsExactlyInAnyOrder(achievement1, achievement2)
@@ -79,7 +79,7 @@ class SourceManagerTest {
         val game = sourceDriver.createGame(Platform.Steam)
         sourceDriver.addToLibrary(player, game)
 
-        testObj.sync(player, sourceDriver.source(player))
+        testObj.syncGame(player, game)
 
         assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
         assertThat(apiDriver.gameLibraryDao[player]).containsExactly(

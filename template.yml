@@ -22,6 +22,52 @@ Resources:
         ExposeHeaders: [ '*' ]
       DisableExecuteApiEndpoint: true
 
+  SyncWorker:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Runtime: java11
+      Timeout: 60
+      Handler: io.andrewohara.cheetosbros.SyncLambdaHandler
+      MemorySize: 1024
+      Environment:
+        Variables:
+          GAMES_TABLE: !Ref Games
+          ACHIEVEMENTS_TABLE: !Ref Achievements
+          ACHIEVEMENT_STATUS_TABLE: !Ref AchievementStatus
+          LIBRARY_TABLE: !Ref GameLibrary
+          STEAM_API_KEY_NAME: !Ref SteamApiKeySsmName
+          SYNC_QUEUE_URL: !Ref SyncQueue
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt SyncQueue.QueueName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Games
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Achievements
+        - DynamoDBCrudPolicy:
+            TableName: !Ref GameLibrary
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AchievementStatus
+        - Version: "2012-10-17"
+          Statement:
+            - Sid: "ssm"
+              Effect: "Allow"
+              Action:
+                - "ssm:GetParameters"
+                - "ssm:GetParameter"
+                - "ssm:GetParametersByPath"
+              Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SteamApiKeySsmName}
+      Events:
+        WorkQueue:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SyncQueue.Arn
+            BatchSize: 10
+            Enabled: true
+
+  SyncQueue:
+    Type: AWS::SQS::Queue
 
   ApiHandler:
     Type: 'AWS::Serverless::Function'
@@ -43,6 +89,7 @@ Resources:
           PUBLIC_PEM_NAME: !Ref PublicPemSsmName
           FRONTEND_HOST: !Ref FrontendHost
           PEM_ISSUER: !Ref AWS::StackName
+          SYNC_QUEUE_URL: !Ref SyncQueue
       Events:
         HttpApiEvent:
           Type: HttpApi
@@ -61,6 +108,8 @@ Resources:
            TableName: !Ref AchievementStatus
         - DynamoDBCrudPolicy:
             TableName: !Ref SocialLinks
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt SyncQueue.QueueName
         - Version: "2012-10-17"
           Statement:
             - Sid: "ssm"

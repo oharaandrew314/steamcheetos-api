@@ -9,14 +9,18 @@ data class Player(
         val username: String,
         val avatar: String?,
         var token: String?
-)
+) {
+    fun uid() = "$platform-$id"
+}
 
 data class Game(
         val platform: Platform,
         val id: String,
         val name: String,
         val displayImage: String?
-)
+) {
+    fun uid() = "$platform-$id"
+}
 
 enum class Platform { Steam, Xbox }
 
@@ -37,7 +41,7 @@ data class AchievementStatus(
 interface Source {
     val platform: Platform
 
-//    fun getPlayer(playerId: String): Player?
+    fun getPlayer(playerId: String): Player?
     fun getFriends(playerId: String): Collection<String>
     fun library(playerId: String): Collection<Game>
     fun achievements(gameId: String): Collection<Achievement>

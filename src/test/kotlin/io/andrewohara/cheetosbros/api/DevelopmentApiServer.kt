@@ -1,7 +1,6 @@
 package io.andrewohara.cheetosbros.api
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
-import io.javalin.Javalin
 import io.javalin.plugin.rendering.vue.readText
 import java.nio.file.Paths
 
@@ -20,16 +19,10 @@ object DevelopmentApiServer {
             steamKey = System.getenv("STEAM_API_KEY"),
             privateKey = Paths.get(System.getenv("PRIVATE_PEM_PATH")).readText(),
             publicKey = Paths.get(System.getenv("PUBLIC_PEM_PATH")).readText(),
+            syncQueueUrl = System.getenv("SYNC_QUEUE_URL"),
             publicKeyIssuer = "cheetosbros-localhost",
             frontendHost = "http://localhost:3000"
         )
-
-//        val app = Javalin.create {
-//            builder.updateConfig(it)
-//        }
-//        builder.registerController(app)
-//        app.start(8000)
-
 
         builder.startSpark(8000, cors = true, decodeQueryParams = false)
     }

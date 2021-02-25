@@ -1,6 +1,7 @@
 package io.andrewohara.cheetosbros.api.auth
 
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
 import java.io.IOException
@@ -12,7 +13,10 @@ import java.net.http.HttpResponse
 class OpenXblAuth(private val publicAppKey: String) {
 
     private val client = HttpClient.newHttpClient()
-    private val adapter = Moshi.Builder().build().adapter(OpenXblAuthResult::class.java)
+    private val adapter = Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
+        .adapter(OpenXblAuthResult::class.java)
 
     fun getLoginUrl() = "https://xbl.io/app/auth/$publicAppKey"
 

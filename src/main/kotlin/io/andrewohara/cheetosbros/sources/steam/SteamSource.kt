@@ -1,6 +1,7 @@
 package io.andrewohara.cheetosbros.sources.steam
 
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.andrewohara.cheetosbros.sources.*
 import java.io.IOException
 import java.lang.IllegalStateException
@@ -17,7 +18,9 @@ class SteamSource(private val apiKey: String): Source {
     companion object {
         private const val host = "https://api.steampowered.com"
 
-        private val mapper = Moshi.Builder().build()
+        private val mapper = Moshi.Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .build()
     }
 
     override val platform = Platform.Steam
@@ -91,7 +94,7 @@ class SteamSource(private val apiKey: String): Source {
                 ?: emptyList()
     }
 
-    fun getPlayer(playerId: String): Player? {
+    override fun getPlayer(playerId: String): Player? {
         val request = HttpRequest.newBuilder()
                 .uri("ISteamUser","GetPlayerSummaries", 2, params = mapOf("steamids" to playerId))
                 .GET()

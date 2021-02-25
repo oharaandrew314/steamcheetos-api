@@ -34,7 +34,7 @@ class ApiTestDriver: ExternalResource() {
 
         time = Instant.parse("2020-01-01T00:00:00Z")
 
-        socialLinkDao = DynamoSocialLinkDao(dynamoDb, "social-links").apply {
+        socialLinkDao = SocialLinkDao(dynamoDb, "social-links").apply {
             mapper.createTable(ProvisionedThroughput(1, 1))
         }
 
