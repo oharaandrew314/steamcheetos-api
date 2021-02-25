@@ -11,12 +11,14 @@ data class GameDtoV1(
     val achievementsCurrent: Int,
     val displayImage: String?
 ) {
-    constructor(ownedGame: OwnedGame): this(
-        platform = ownedGame.platform,
-        uid = ownedGame.gameUid(),
-        name = ownedGame.name,
-        achievementsTotal = ownedGame.totalAchievements,
-        achievementsCurrent = ownedGame.currentAchievements,
-        displayImage = ownedGame.displayImage
-    )
+    companion object {
+        fun create(ownedGame: OwnedGame) = GameDtoV1(
+            platform = ownedGame.platform,
+            uid = ownedGame.gameUid(),
+            name = ownedGame.name,
+            achievementsTotal = ownedGame.totalAchievements,
+            achievementsCurrent = ownedGame.currentAchievements,
+            displayImage = ownedGame.displayImage
+        )
+    }
 }

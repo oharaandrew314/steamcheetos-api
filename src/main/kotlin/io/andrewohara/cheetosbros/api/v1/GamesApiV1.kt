@@ -3,7 +3,6 @@ package io.andrewohara.cheetosbros.api.v1
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.andrewohara.cheetosbros.api.games.v1.GamesManager
-import io.andrewohara.cheetosbros.api.games.v1.OwnedGame
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.sources.Achievement
 import io.andrewohara.cheetosbros.sources.AchievementStatus
@@ -47,10 +46,10 @@ class GamesApiV1(
 
         val games = gamesManager.listGames(user)
 
-        return games.map { GameDtoV1(it) }
+        return games.map { GameDtoV1.create(it) }
     }
 
-    private fun getGame(request: Request, response: Response): OwnedGame {
+    private fun getGame(request: Request, response: Response): GameDtoV1 {
         val user = request.attribute<User>("user") ?: throw halt(401)
         val platform = request.params("platform").toPlatform()
         val gameId = request.params("game_id")
@@ -58,8 +57,10 @@ class GamesApiV1(
         val player = user.players[platform]
             ?: throw halt(404, "User does not have a $platform player")
 
-        return gamesManager.getGame(player, gameId)
+        val game = gamesManager.getGame(player, gameId)
             ?: throw halt(404, "Could not find game $gameId")
+
+        return GameDtoV1.create(game)
     }
 
     private fun listAchievements(request: Request, response: Response): Collection<Achievement> {

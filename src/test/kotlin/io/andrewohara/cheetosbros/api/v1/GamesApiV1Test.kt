@@ -2,8 +2,8 @@ package io.andrewohara.cheetosbros.api.v1
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import io.andrewohara.cheetosbros.api.TestDriver
-import io.andrewohara.cheetosbros.api.games.v1.OwnedGame
+import io.andrewohara.cheetosbros.api.ApiTestDriver
+import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.sources.Platform
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
@@ -16,30 +16,24 @@ import java.net.http.HttpResponse
 
 class GamesApiV1Test {
 
-    @Rule @JvmField val driver = TestDriver()
+    @Rule @JvmField val driver = ApiTestDriver
 
     private val client = HttpClient.newHttpClient()
-    private val mapper = Moshi.Builder()
+    private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    private val gamesMapper = mapper.adapter(Array<GameDtoV1>::class.java)
+    private val gamesMapper = moshi.adapter(Array<GameDtoV1>::class.java)
 
     @Test
     fun `list games`() {
-        val game = OwnedGame(
-            platform = Platform.Steam,
-            id = "123",
-            name = "Satisfactory",
-            currentAchievements = 1,
-            displayImage = null,
-            totalAchievements = 3
-        )
-
-        driver.libraryDao.save(driver.steamPlayer1, game)
+        val user = driver.createUser(steam = driver.steamPlayer1)
+        val game = driver.createGame(Platform.Steam)
+        driver.addToLibrary(driver.steamPlayer1, game, 1, 3)
 
         val request = HttpRequest
             .newBuilder(URI.create("http://localhost:${Spark.port()}/v1/games"))
+            .asUser(user)
             .GET()
             .build()
 
@@ -48,12 +42,16 @@ class GamesApiV1Test {
         assertThat(gamesMapper.fromJson(response.body())).containsExactly(
             GameDtoV1(
                 platform = Platform.Steam,
-                uid = "Steam-123",
-                name = "Satisfactory",
+                uid = game.uid(),
+                name = game.name,
                 achievementsCurrent = 1,
                 achievementsTotal = 3,
                 displayImage = null
             )
         )
+    }
+
+    private fun HttpRequest.Builder.asUser(user: User): HttpRequest.Builder {
+        return header("Authorization", "Bearer ${driver.authorizationDao.assignToken(user)}")
     }
 }

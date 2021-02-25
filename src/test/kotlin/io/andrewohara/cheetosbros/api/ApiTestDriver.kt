@@ -1,70 +1,90 @@
 package io.andrewohara.cheetosbros.api
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTableMapper
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
-import io.andrewohara.cheetosbros.api.auth.AuthorizationDao
+import io.andrewohara.awsmock.sqs.MockAmazonSQS
+import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
 import io.andrewohara.cheetosbros.lib.PemUtils
 import io.andrewohara.cheetosbros.api.games.v1.*
 import io.andrewohara.cheetosbros.api.users.*
+import io.andrewohara.cheetosbros.api.v1.GamesApiV1
 import io.andrewohara.cheetosbros.sources.*
+import io.andrewohara.cheetosbros.sync.SqsSyncClient
 import org.junit.rules.ExternalResource
+import spark.Spark
 import java.time.Instant
 import java.util.*
 
-class ApiTestDriver: ExternalResource() {
+object ApiTestDriver: ExternalResource() {
 
-    // Daos
-    private lateinit var socialLinkDao: SocialLinkDao
-    private lateinit var usersDao: UsersDao
-    lateinit var gamesDao: GamesDao
-    lateinit var achievementsDao: AchievementsDao
-    lateinit var gameLibraryDao: GameLibraryDao
-    lateinit var achievementStatusDao: AchievementStatusDao
-    lateinit var authorizationDao: AuthorizationDao
+    // Test Fixtures
+    val steamPlayer1 = Player(
+        platform = Platform.Steam,
+        id = "player1",
+        avatar = null,
+        username = "player one",
+        token = null
+    )
 
-    // Managers
-    lateinit var gamesManager: GamesManager
+    private const val syncQueueName = "sync-queue"
 
-    // Config
-    private lateinit var time: Instant
+    private val dynamoDb = MockAmazonDynamoDB()
+    private val sqs = MockAmazonSQS()
+
+    private val socialLinkDao = SocialLinkDao(dynamoDb, "social-links").apply {
+        mapper.createTable(ProvisionedThroughput(1, 1))
+    }
+
+    private val usersDao = UsersDao("users", dynamoDb).apply {
+        mapper.createTable(ProvisionedThroughput(1, 1))
+    }
+
+    val gamesDao = GamesDao("games", dynamoDb).apply {
+        mapper.createTable(ProvisionedThroughput(1, 1))
+    }
+
+    val achievementsDao = AchievementsDao("achievements", dynamoDb).apply {
+        mapper.createTable(ProvisionedThroughput(1, 1))
+    }
+
+    val libraryDao = GameLibraryDao("user-games", dynamoDb).apply {
+        mapper.createTable(ProvisionedThroughput(1, 1))
+    }
+
+    val achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb).apply {
+        mapper.createTable(ProvisionedThroughput(1, 1))
+    }
+
+    val authorizationDao = JwtAuthorizationDao(
+            issuer = "cheetosbros-test",
+            privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
+            publicKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test-pub.pem")!!)!!
+    )
+
+    private val syncQueueUrl = sqs.createQueue(syncQueueName).queueUrl
+
+    val gamesManager = GamesManager(gamesDao, libraryDao, achievementsDao, achievementStatusDao)
+    private val authManager = AuthManager(authorizationDao, usersDao, socialLinkDao)
 
     override fun before() {
-        val dynamoDb = MockAmazonDynamoDB()
+        GamesApiV1(gamesManager = gamesManager, syncClient = SqsSyncClient(sqs, syncQueueName))
+        Spark.before(authManager)
+        Spark.awaitInitialization()
+    }
 
-        time = Instant.parse("2020-01-01T00:00:00Z")
+    override fun after() {
+        socialLinkDao.mapper.clear()
+        usersDao.mapper.clear()
+        gamesDao.mapper.clear()
+        achievementsDao.mapper.clear()
+        libraryDao.mapper.clear()
+        achievementStatusDao.mapper.clear()
+        sqs[syncQueueUrl]!!.messages.clear()
 
-        socialLinkDao = SocialLinkDao(dynamoDb, "social-links").apply {
-            mapper.createTable(ProvisionedThroughput(1, 1))
-        }
-
-        usersDao = UsersDao("users", dynamoDb).apply {
-            mapper.createTable(ProvisionedThroughput(1, 1))
-        }
-
-        gamesDao = GamesDao("games", dynamoDb).apply {
-            mapper.createTable(ProvisionedThroughput(1, 1))
-        }
-
-        achievementsDao = AchievementsDao("achievements", dynamoDb).apply {
-            mapper.createTable(ProvisionedThroughput(1, 1))
-        }
-
-        gameLibraryDao = GameLibraryDao("user-games", dynamoDb).apply {
-            mapper.createTable(ProvisionedThroughput(1, 1))
-        }
-
-        achievementStatusDao = AchievementStatusDao("user-achievements", dynamoDb).apply {
-            mapper.createTable(ProvisionedThroughput(1, 1))
-        }
-
-        authorizationDao = JwtAuthorizationDao(
-                issuer = "cheetosbros-test",
-                privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
-                publicKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test-pub.pem")!!)!!
-        )
-
-        gamesManager = GamesManager(gamesDao, gameLibraryDao, achievementsDao, achievementStatusDao)
+        Spark.awaitStop()
     }
 
     fun createPlayer(platform: Platform, displayName: String? = null): Player {
@@ -128,7 +148,7 @@ class ApiTestDriver: ExternalResource() {
             currentAchievements = completed,
             totalAchievements = total
         )
-        gameLibraryDao.save(player, ownedGame)
+        libraryDao.save(player, ownedGame)
         return ownedGame
     }
 
@@ -144,5 +164,10 @@ class ApiTestDriver: ExternalResource() {
 
         usersDao.save(user)
         return user
+    }
+
+    private fun <T, H, R> DynamoDBTableMapper<T, H, R>.clear() {
+        val items = scan(DynamoDBScanExpression()).toList()
+        batchDelete(items)
     }
 }

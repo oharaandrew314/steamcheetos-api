@@ -12,7 +12,7 @@ import java.time.Instant
 
 class GamesManagerTest {
 
-    @Rule @JvmField val driver = ApiTestDriver()
+    @Rule @JvmField val driver = ApiTestDriver
 
     private lateinit var testObj: GamesManager
 

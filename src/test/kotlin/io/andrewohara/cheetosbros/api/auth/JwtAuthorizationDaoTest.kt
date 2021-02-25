@@ -8,7 +8,7 @@ import org.junit.Test
 
 class JwtAuthorizationDaoTest {
 
-    @Rule @JvmField val driver = ApiTestDriver()
+    @Rule @JvmField val driver = ApiTestDriver
 
     @Test
     fun `resolve valid token`() {

@@ -10,7 +10,7 @@ import java.time.Instant
 
 class SourceManagerTest {
 
-    @Rule @JvmField val apiDriver = ApiTestDriver()
+    @Rule @JvmField val apiDriver = ApiTestDriver
     @Rule @JvmField val sourceDriver = SourceTestDriver()
 
     private lateinit var testObj: SourceManager
@@ -20,7 +20,7 @@ class SourceManagerTest {
         testObj = SourceManager(
             sourceFactory = sourceDriver.sourceFactory,
             gamesDao = apiDriver.gamesDao,
-            gameLibraryDao = apiDriver.gameLibraryDao,
+            gameLibraryDao = apiDriver.libraryDao,
             achievementsDao = apiDriver.achievementsDao,
             achievementStatusDao = apiDriver.achievementStatusDao,
         )
@@ -43,7 +43,7 @@ class SourceManagerTest {
         testObj.syncGame(player, game1)
         testObj.syncGame(player, game2)
 
-        assertThat(apiDriver.gameLibraryDao[player]).containsExactlyInAnyOrder(
+        assertThat(apiDriver.libraryDao[player]).containsExactlyInAnyOrder(
             OwnedGame(game1.platform, game1.id, game1.name, game1.displayImage, 0, 1),
             OwnedGame(game2.platform, game2.id, game2.name, game2.displayImage, 0, 1)
         )
@@ -82,7 +82,7 @@ class SourceManagerTest {
         testObj.syncGame(player, game)
 
         assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
-        assertThat(apiDriver.gameLibraryDao[player]).containsExactly(
+        assertThat(apiDriver.libraryDao[player]).containsExactly(
             OwnedGame(game.platform, game.id, game.name, game.displayImage, 0, 0)
         )
         assertThat(apiDriver.achievementsDao[game]).isEmpty()
