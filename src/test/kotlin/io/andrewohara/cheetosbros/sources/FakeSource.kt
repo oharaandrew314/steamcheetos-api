@@ -2,6 +2,8 @@ package io.andrewohara.cheetosbros.sources
 
 import java.lang.IllegalArgumentException
 
+import io.andrewohara.cheetosbros.sources.Source.Game
+
 class FakeSource(override val platform: Platform): Source {
 
     private val players = mutableMapOf<String, Player>()
@@ -16,7 +18,7 @@ class FakeSource(override val platform: Platform): Source {
     }
 
     fun addPlayer(player: Player) {
-        players[player.id] = player
+        players[player.uid.id] = player
         userGames[player] = mutableSetOf()
     }
 
@@ -30,7 +32,7 @@ class FakeSource(override val platform: Platform): Source {
     }
 
     fun addGame(game: Game) {
-        games[game.id] = game
+        games[game.uid.id] = game
         achievements[game] = mutableSetOf()
     }
 

@@ -5,6 +5,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTableMapper
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConverter
+import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.sources.Platform
 import java.time.Instant
 
@@ -24,7 +25,20 @@ class EpochInstantConverter: DynamoDBTypeConverter<Long, Instant> {
     override fun unconvert(serialized: Long): Instant = Instant.ofEpochSecond(serialized)
 }
 
+class IsoInstantConverter: DynamoDBTypeConverter<String, Instant> {
+    override fun convert(instance: Instant)= instance.toString()
+    override fun unconvert(serialized: String): Instant = Instant.parse(serialized)
+}
+
 class PlatformConverter: DynamoDBTypeConverter<String, Platform> {
     override fun convert(instance: Platform) = instance.toString()
     override fun unconvert(serialized: String): Platform = Platform.valueOf(serialized)
+}
+
+class UidConverter: DynamoDBTypeConverter<String, Uid> {
+    override fun convert(uid: Uid) = uid.toString()
+    override fun unconvert(serialized: String): Uid {
+        val (platform, id) = serialized.split("-", limit = 2)
+        return Uid(Platform.valueOf(platform), id)
+    }
 }

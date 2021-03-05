@@ -5,7 +5,7 @@ import com.amazonaws.services.sqs.AmazonSQSClientBuilder
 import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
 import io.andrewohara.cheetosbros.api.auth.SteamOpenID
-import io.andrewohara.cheetosbros.api.games.v1.*
+import io.andrewohara.cheetosbros.api.games.*
 import io.andrewohara.cheetosbros.api.users.SocialLinkDao
 import io.andrewohara.cheetosbros.api.users.UsersDao
 import io.andrewohara.cheetosbros.api.v1.AuthApiV1

@@ -10,13 +10,15 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import io.andrewohara.cheetosbros.api.games.v1.AchievementStatusDao
-import io.andrewohara.cheetosbros.api.games.v1.AchievementsDao
-import io.andrewohara.cheetosbros.api.games.v1.GameLibraryDao
-import io.andrewohara.cheetosbros.api.games.v1.GamesDao
+import io.andrewohara.cheetosbros.api.games.AchievementStatusDao
+import io.andrewohara.cheetosbros.api.games.AchievementsDao
+import io.andrewohara.cheetosbros.api.games.GameLibraryDao
+import io.andrewohara.cheetosbros.api.games.GamesDao
 import io.andrewohara.cheetosbros.sources.SourceManager
 import io.andrewohara.cheetosbros.sync.SqsSyncClient
 import io.andrewohara.cheetosbros.sync.SyncMessage
+import java.time.Duration
+import java.time.Instant
 
 class SyncLambdaHandler: RequestHandler<SQSEvent, Unit> {
 
@@ -39,7 +41,9 @@ class SyncLambdaHandler: RequestHandler<SQSEvent, Unit> {
             achievementsDao = AchievementsDao(System.getenv("ACHIEVEMENTS_TABLE"), dynamoDb),
             achievementStatusDao = AchievementStatusDao(System.getenv("ACHIEVEMENT_STATUS_TABLE"), dynamoDb),
             gamesDao = GamesDao(System.getenv("GAMES_TABLE"), dynamoDb),
-            gameLibraryDao = GameLibraryDao(System.getenv("LIBRARY_TABLE"), dynamoDb)
+            gameLibraryDao = GameLibraryDao(System.getenv("LIBRARY_TABLE"), dynamoDb),
+            gameCacheDuration = Duration.ofDays(7),
+            timeSupplier = { Instant.now() }
         )
     }
 

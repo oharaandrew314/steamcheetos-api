@@ -1,4 +1,4 @@
-package io.andrewohara.cheetosbros.api.games.v1
+package io.andrewohara.cheetosbros.api.games
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDocument
@@ -7,21 +7,19 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.sources.AchievementStatus
-import io.andrewohara.cheetosbros.sources.Game
-import io.andrewohara.cheetosbros.sources.Player
 import java.time.Instant
 
 class AchievementStatusDao(tableName: String, client: AmazonDynamoDB) {
     val mapper = DynamoUtils.mapper<DynamoUserAchievement, String, String>(tableName, client)
 
-    fun batchSave(player: Player, game: Game, achievementStatuses: Collection<AchievementStatus>) {
-        val items = achievementStatuses.map { DynamoUserAchievement(player, game, it) }
+    fun batchSave(playerUid: Uid, gameUid: Uid, achievementStatuses: Collection<AchievementStatus>) {
+        val items = achievementStatuses.map { DynamoUserAchievement(playerUid, gameUid, it) }
         mapper.batchSave(items)
     }
 
-    operator fun get(player: Player, game: Game): Collection<AchievementStatus> {
+    operator fun get(playerUid: Uid, gameUid: Uid): Collection<AchievementStatus> {
         val query = DynamoDBQueryExpression<DynamoUserAchievement>()
-                .withHashKeyValues(DynamoUserAchievement(playerAndGameId = hashKey(player, game)))
+                .withHashKeyValues(DynamoUserAchievement(playerAndGameId = hashKey(playerUid, gameUid)))
 
         return mapper.query(query).map { it.toStatus() }
     }
@@ -36,8 +34,8 @@ class AchievementStatusDao(tableName: String, client: AmazonDynamoDB) {
 
             var unlockedOn: String? = null,
     ) {
-        constructor(player: Player, game: Game, achievementStatus: AchievementStatus): this(
-                playerAndGameId = hashKey(player, game),
+        constructor(playerUid: Uid, gameUid: Uid, achievementStatus: AchievementStatus): this(
+                playerAndGameId = hashKey(playerUid, gameUid),
                 achievementId = achievementStatus.achievementId,
                 unlockedOn = achievementStatus.unlockedOn?.toString(),
         )
@@ -49,6 +47,6 @@ class AchievementStatusDao(tableName: String, client: AmazonDynamoDB) {
     }
 
     companion object {
-        fun hashKey(player: Player, game: Game) = "${player.platform}-${player.id}-${game.id}"
+        fun hashKey(playerUid: Uid, gameUid: Uid) = "$playerUid-${gameUid.id}"
     }
 }

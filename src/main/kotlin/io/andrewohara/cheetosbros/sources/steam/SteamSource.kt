@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros.sources.steam
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.sources.*
 import java.io.IOException
 import java.lang.IllegalStateException
@@ -27,7 +28,7 @@ class SteamSource(private val apiKey: String): Source {
 
     private val client = HttpClient.newHttpClient()
 
-    override fun library(playerId: String): Collection<Game> {
+    override fun library(playerId: String): Collection<Source.Game> {
         val request = HttpRequest.newBuilder()
                 .uri("IPlayerService","GetOwnedGames", 1, steamId=playerId.toLong(), params = mapOf("include_appinfo" to "1", "include_played_free_games" to "1"))
                 .GET()
@@ -41,10 +42,9 @@ class SteamSource(private val apiKey: String): Source {
         return mapper.adapter(GetOwnedGamesResponse::class.java).fromJson(response.body())!!
                 .response
                 .games
-                .map { game -> Game(
-                        id = game.appid.toString(),
+                .map { game -> Source.Game(
+                        uid = Uid(platform, game.appid.toString()),
                         name = game.name,
-                        platform = platform,
                         displayImage = "http://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_logo_url}.jpg"
                 )}
     }
@@ -115,8 +115,7 @@ class SteamSource(private val apiKey: String): Source {
                 .firstOrNull { it.steamid == playerId }
                 ?.let {
                     Player(
-                            id = it.steamid,
-                            platform = platform,
+                            uid = Uid(platform, it.steamid),
                             username = it.personaname,
                             avatar = it.avatarfull,
                             token = null

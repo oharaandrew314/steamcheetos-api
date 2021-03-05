@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros.api.auth
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
 import java.io.IOException
@@ -24,11 +25,11 @@ class OpenXblAuth(private val publicAppKey: String) {
         val payload = """{"code": "$code", "app_key": "$publicAppKey"}"""
 
         val request = HttpRequest
-                .newBuilder(URI.create("https://xbl.io/app/claim"))
-                .header("X-Contract", "2")
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(payload))
-                .build()
+            .newBuilder(URI.create("https://xbl.io/app/claim"))
+            .header("X-Contract", "2")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(payload))
+            .build()
 
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
 
@@ -39,20 +40,19 @@ class OpenXblAuth(private val publicAppKey: String) {
         val result = adapter.fromJson(response.body())!!
 
         return Player(
-                platform = Platform.Xbox,
-                id = result.xuid,
-                username = result.gamertag,
-                avatar = result.avatar,
-                token = result.app_key
+            uid = Uid(Platform.Xbox, result.xuid),
+            username = result.gamertag,
+            avatar = result.avatar,
+            token = result.app_key
         )
     }
 
     private data class OpenXblAuthResult(
-            val xuid: String,
-            val gamertag: String,
-            val avatar: String,
-            val gamerscore: String,
-            val app_key: String
+        val xuid: String,
+        val gamertag: String,
+        val avatar: String,
+        val gamerscore: String,
+        val app_key: String
     )
 }
 

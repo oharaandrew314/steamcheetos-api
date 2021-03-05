@@ -1,13 +1,14 @@
 package io.andrewohara.cheetosbros.api.v1
 
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import io.andrewohara.cheetosbros.api.games.v1.GamesManager
+import io.andrewohara.cheetosbros.api.games.GamesManager
 import io.andrewohara.cheetosbros.api.users.User
-import io.andrewohara.cheetosbros.sources.Achievement
-import io.andrewohara.cheetosbros.sources.AchievementStatus
+import io.andrewohara.cheetosbros.lib.IsoInstantJsonAdapter
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sync.SyncClient
+import org.eclipse.jetty.util.Promise
 import spark.Request
 import spark.Response
 import spark.ResponseTransformer
@@ -19,37 +20,40 @@ class GamesApiV1(
     private val syncClient: SyncClient
 ) {
 
+    private val mapper = DtoMapperImpl()
+
     init {
         // games
-        get("/v1/games", ::listGames, JsonTransformer)
-        get("/v1/games/:platform/:game_id", ::getGame, JsonTransformer)
-        get("/v1/games/:platform/:game_id/achievements", ::listAchievements, JsonTransformer)
-        get("/v1/games/:platform/:game_id/achievements/status", ::listAchievementStatus, JsonTransformer)
+        get("/v1/games", ::listGames, JsonMapper)
+        get("/v1/games/:platform/:game_id", ::getGame, JsonMapper)
+        get("/v1/games/:platform/:game_id/achievements", ::listAchievements, JsonMapper)
 
         // sync
         post("/v1/sync", ::sync)
     }
 
-    private object JsonTransformer : ResponseTransformer {
-        private val mapper = Moshi.Builder()
+    object JsonMapper : ResponseTransformer {
+        val moshi: Moshi = Moshi.Builder()
+            .add(IsoInstantJsonAdapter())
             .addLast(KotlinJsonAdapterFactory())
             .build()
-            .adapter<Any>(Object::class.java)
+
+        private val mapper: JsonAdapter<Any> = moshi.adapter<Any>(Object::class.java)
 
         override fun render(model: Any): String {
             return mapper.toJson(model)
         }
     }
 
-    private fun listGames(request: Request, response: Response): Collection<GameDtoV1> {
+    private fun listGames(request: Request, response: Response): Collection<OwnedGameDetailsDtoV1> {
         val user = request.attribute<User>("user") ?: throw halt(401)
 
         val games = gamesManager.listGames(user)
 
-        return games.map { GameDtoV1.create(it) }
+        return games.map { mapper.toDtoV1(it) }
     }
 
-    private fun getGame(request: Request, response: Response): GameDtoV1 {
+    private fun getGame(request: Request, response: Response): OwnedGameDetailsDtoV1 {
         val user = request.attribute<User>("user") ?: throw halt(401)
         val platform = request.params("platform").toPlatform()
         val gameId = request.params("game_id")
@@ -57,25 +61,20 @@ class GamesApiV1(
         val player = user.players[platform]
             ?: throw halt(404, "User does not have a $platform player")
 
-        val game = gamesManager.getGame(player, gameId)
+        val gameDetails = gamesManager.getGame(player, gameId)
             ?: throw halt(404, "Could not find game $gameId")
 
-        return GameDtoV1.create(game)
+        return mapper.toDtoV1(gameDetails)
     }
 
-    private fun listAchievements(request: Request, response: Response): Collection<Achievement> {
-        val platform = request.params("platform").toPlatform()
-        val gameId = request.params("game_id")
-
-        return gamesManager.listAchievements(platform, gameId) ?: throw halt(404)
-    }
-
-    private fun listAchievementStatus(request: Request, response: Response): Collection<AchievementStatus> {
+    private fun listAchievements(request: Request, response: Response): Collection<AchievementDetailsDtoV1> {
         val user = request.attribute<User>("user") ?: throw halt(401)
         val platform = request.params("platform").toPlatform()
         val gameId = request.params("game_id")
 
-        return gamesManager.listAchievementStatus(user, platform, gameId) ?: throw halt(404)
+        val achievements = gamesManager.listAchievements(user, platform, gameId) ?: throw halt(404)
+
+        return achievements.map { mapper.toDtoV1(it) }
     }
 
     private fun sync(request: Request, response: Response) {

@@ -1,24 +1,34 @@
 package io.andrewohara.cheetosbros.api.v1
 
-import io.andrewohara.cheetosbros.api.games.v1.OwnedGame
-import io.andrewohara.cheetosbros.sources.Platform
+import io.andrewohara.cheetosbros.api.games.AchievementDetails
+import io.andrewohara.cheetosbros.api.games.OwnedGameDetails
+import io.andrewohara.cheetosbros.api.games.Uid
+import org.mapstruct.Mapper
+import java.time.Instant
 
-data class GameDtoV1(
-    val platform: Platform,
-    val uid: String,
+data class OwnedGameDetailsDtoV1(
+    val uid: Uid,
     val name: String,
     val achievementsTotal: Int,
     val achievementsCurrent: Int,
-    val displayImage: String?
-) {
-    companion object {
-        fun create(ownedGame: OwnedGame) = GameDtoV1(
-            platform = ownedGame.platform,
-            uid = ownedGame.gameUid(),
-            name = ownedGame.name,
-            achievementsTotal = ownedGame.totalAchievements,
-            achievementsCurrent = ownedGame.currentAchievements,
-            displayImage = ownedGame.displayImage
-        )
-    }
+    val displayImage: String?,
+    val lastUpdated: Instant
+)
+
+data class AchievementDetailsDtoV1(
+    val id: String,
+    val name: String,
+    val description: String?,
+    val hidden: Boolean,
+    val icons: List<String>,
+    val score: Int?,
+
+    val unlockedOn: Instant?,
+    val unlocked: Boolean
+)
+
+@Mapper
+interface DtoMapper {
+    fun toDtoV1(gameDetails: OwnedGameDetails): OwnedGameDetailsDtoV1
+    fun toDtoV1(details: AchievementDetails): AchievementDetailsDtoV1
 }

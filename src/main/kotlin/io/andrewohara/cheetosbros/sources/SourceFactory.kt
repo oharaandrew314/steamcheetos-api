@@ -11,7 +11,7 @@ class SourceFactoryImpl(steamKey: String): SourceFactory {
 
     private val steamSource = SteamSource(steamKey)
 
-    override fun get(player: Player) = when(player.platform) {
+    override fun get(player: Player) = when(player.uid.platform) {
 //        Platform.Xbox -> OpenXblSource(player.token!!)
         Platform.Steam -> steamSource
         else -> null

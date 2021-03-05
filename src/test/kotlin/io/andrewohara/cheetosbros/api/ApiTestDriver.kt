@@ -7,8 +7,8 @@ import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
 import io.andrewohara.awsmock.sqs.MockAmazonSQS
 import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
+import io.andrewohara.cheetosbros.api.games.*
 import io.andrewohara.cheetosbros.lib.PemUtils
-import io.andrewohara.cheetosbros.api.games.v1.*
 import io.andrewohara.cheetosbros.api.users.*
 import io.andrewohara.cheetosbros.api.v1.GamesApiV1
 import io.andrewohara.cheetosbros.sources.*
@@ -20,10 +20,11 @@ import java.util.*
 
 object ApiTestDriver: ExternalResource() {
 
+    val time: Instant = Instant.parse("2021-03-04T01:00:00Z")
+
     // Test Fixtures
     val steamPlayer1 = Player(
-        platform = Platform.Steam,
-        id = "player1",
+        uid = Uid(Platform.Steam, "player1"),
         avatar = null,
         username = "player one",
         token = null
@@ -90,28 +91,28 @@ object ApiTestDriver: ExternalResource() {
     fun createPlayer(platform: Platform, displayName: String? = null): Player {
         val id = UUID.randomUUID().toString()
         return Player(
-                id = id,
+                uid = Uid(platform, id),
                 avatar = null,
-                platform = platform,
                 username = displayName ?: "player-$id",
                 token = null
         )
     }
 
-    fun createGame(platform: Platform, name: String? = null): Game {
+    fun createGame(platform: Platform, achievements: Int, name: String? = null): CachedGame {
         val id = UUID.randomUUID().toString()
-        val game = Game(
-                id = id,
+        val game = CachedGame(
+                uid = Uid(platform, id),
                 displayImage = null,
                 name = name ?: "game-$id",
-                platform = platform
+                achievements = achievements,
+                lastUpdated = time
         )
         gamesDao.save(game)
 
         return game
     }
 
-    fun createAchievement(game: Game, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
+    fun createAchievement(game: CachedGame, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
         val id = UUID.randomUUID().toString()
         val actualName = name ?: "achievement-$id"
         val achievement = Achievement(
@@ -123,39 +124,36 @@ object ApiTestDriver: ExternalResource() {
                 score = score
         )
 
-        achievementsDao.batchSave(game, listOf(achievement))
+        achievementsDao.batchSave(game.uid, listOf(achievement))
 
         return achievement
     }
 
-    fun unlockAchievement(player: Player, game: Game, achievement: Achievement, unlocked: Instant?): AchievementStatus {
+    fun unlockAchievement(player: Player, game: CachedGame, achievement: Achievement, unlocked: Instant?): AchievementDetails {
         val status = AchievementStatus(
                 achievementId = achievement.id,
                 unlockedOn = unlocked
         )
 
-        achievementStatusDao.batchSave(player, game, listOf(status))
+        achievementStatusDao.batchSave(player.uid, game.uid, listOf(status))
 
-        return status
+        return AchievementDetails.create(achievement, unlocked)
     }
 
-    fun addToLibrary(player: Player, game: Game, completed: Int, total: Int): OwnedGame {
+    fun addToLibrary(player: Player, game: CachedGame, achievements: Int = 0): OwnedGameDetails {
         val ownedGame = OwnedGame(
-            platform = game.platform,
-            id = game.id,
-            name = game.name,
-            displayImage = game.displayImage,
-            currentAchievements = completed,
-            totalAchievements = total
+            uid = game.uid,
+            achievements = achievements,
+            lastUpdated = time
         )
         libraryDao.save(player, ownedGame)
-        return ownedGame
+        return OwnedGameDetails(game, ownedGame)
     }
 
     fun createUser(xbox: Player? = null, steam: Player? = null): User {
         val players = mutableMapOf<Platform, Player>()
-        if (xbox != null) players[xbox.platform] = xbox
-        if (steam != null) players[steam.platform] = steam
+        if (xbox != null) players[xbox.uid.platform] = xbox
+        if (steam != null) players[steam.uid.platform] = steam
 
         val user = User(
                 id = UUID.randomUUID().toString(),

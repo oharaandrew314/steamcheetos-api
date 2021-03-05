@@ -1,11 +1,13 @@
 package io.andrewohara.cheetosbros.api
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
-import io.javalin.plugin.rendering.vue.readText
 import java.nio.file.Paths
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.readText
 
 object DevelopmentApiServer {
 
+    @ExperimentalPathApi
     @JvmStatic
     fun main(args: Array<String>) {
         val builder = ApiBuilder(

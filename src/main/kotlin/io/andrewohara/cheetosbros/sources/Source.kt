@@ -1,26 +1,15 @@
 package io.andrewohara.cheetosbros.sources
 
+import io.andrewohara.cheetosbros.api.games.Uid
 import java.lang.Exception
 import java.time.Instant
 
 data class Player(
-        val platform: Platform,
-        val id: String,
+        val uid: Uid,
         val username: String,
         val avatar: String?,
         var token: String?
-) {
-    fun uid() = "$platform-$id"
-}
-
-data class Game(
-        val platform: Platform,
-        val id: String,
-        val name: String,
-        val displayImage: String?
-) {
-    fun uid() = "$platform-$id"
-}
+)
 
 enum class Platform { Steam, Xbox }
 
@@ -46,6 +35,12 @@ interface Source {
     fun library(playerId: String): Collection<Game>
     fun achievements(gameId: String): Collection<Achievement>
     fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus>
+
+    data class Game(
+        val uid: Uid,
+        val name: String,
+        val displayImage: String?
+    )
 }
 
 class SourceAccessDenied(message: String): Exception(message)

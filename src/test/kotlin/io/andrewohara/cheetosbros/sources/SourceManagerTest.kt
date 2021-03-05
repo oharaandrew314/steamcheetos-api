@@ -1,11 +1,13 @@
 package io.andrewohara.cheetosbros.sources
 
 import io.andrewohara.cheetosbros.api.ApiTestDriver
-import io.andrewohara.cheetosbros.api.games.v1.OwnedGame
+import io.andrewohara.cheetosbros.api.games.CachedGame
+import io.andrewohara.cheetosbros.api.games.OwnedGame
 import org.assertj.core.api.Assertions.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.time.Duration
 import java.time.Instant
 
 class SourceManagerTest {
@@ -23,6 +25,8 @@ class SourceManagerTest {
             gameLibraryDao = apiDriver.libraryDao,
             achievementsDao = apiDriver.achievementsDao,
             achievementStatusDao = apiDriver.achievementStatusDao,
+            gameCacheDuration = Duration.ofSeconds(30),
+            timeSupplier = { apiDriver.time }
         )
     }
 
@@ -30,9 +34,10 @@ class SourceManagerTest {
     fun `sync multiple games`() {
         val player = sourceDriver.createPlayer(Platform.Steam)
 
-        val game1 = sourceDriver.createGame(player.platform)
+        val game1 = sourceDriver.createGame(player.uid.platform)
         val game1Achievement = sourceDriver.createAchievement(game1)
         sourceDriver.addToLibrary(player, game1)
+        sourceDriver.unlockAchievement(player, game1, game1Achievement, apiDriver.time)
 
         val game2 = sourceDriver.createGame(Platform.Steam)
         val game2Achievement = sourceDriver.createAchievement(game2)
@@ -44,12 +49,15 @@ class SourceManagerTest {
         testObj.syncGame(player, game2)
 
         assertThat(apiDriver.libraryDao[player]).containsExactlyInAnyOrder(
-            OwnedGame(game1.platform, game1.id, game1.name, game1.displayImage, 0, 1),
-            OwnedGame(game2.platform, game2.id, game2.name, game2.displayImage, 0, 1)
+            OwnedGame(game1.uid, 1, apiDriver.time),
+            OwnedGame(game2.uid, 0, apiDriver.time)
         )
-        assertThat(apiDriver.gamesDao.batchGet(player.platform, listOf(game1.id, game2.id))).containsExactlyInAnyOrder(game1, game2)
-        assertThat(apiDriver.achievementsDao[game1]).containsExactly(game1Achievement)
-        assertThat(apiDriver.achievementsDao[game2]).containsExactly(game2Achievement)
+        assertThat(apiDriver.gamesDao.batchGet(listOf(game1.uid, game2.uid))).containsExactlyInAnyOrder(
+            CachedGame.create(game1, 1, apiDriver.time),
+            CachedGame.create(game2, 1, apiDriver.time)
+        )
+        assertThat(apiDriver.achievementsDao[game1.uid]).containsExactly(game1Achievement)
+        assertThat(apiDriver.achievementsDao[game2.uid]).containsExactly(game2Achievement)
     }
 
     @Test
@@ -64,9 +72,9 @@ class SourceManagerTest {
 
         testObj.syncGame(player, game)
 
-        assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
-        assertThat(apiDriver.achievementsDao[game]).containsExactlyInAnyOrder(achievement1, achievement2)
-        assertThat(apiDriver.achievementStatusDao[player, game]).containsExactlyInAnyOrder(
+        assertThat(apiDriver.gamesDao[game.uid]).isEqualTo(CachedGame.create(game, 2, apiDriver.time))
+        assertThat(apiDriver.achievementsDao[game.uid]).containsExactlyInAnyOrder(achievement1, achievement2)
+        assertThat(apiDriver.achievementStatusDao[player.uid, game.uid]).containsExactlyInAnyOrder(
             status1,
             AchievementStatus(achievementId = achievement2.id, unlockedOn = null)
         )
@@ -81,10 +89,10 @@ class SourceManagerTest {
 
         testObj.syncGame(player, game)
 
-        assertThat(apiDriver.gamesDao[game.platform, game.id]).isEqualTo(game)
+        assertThat(apiDriver.gamesDao[game.uid]).isEqualTo(CachedGame.create(game, 0, apiDriver.time))
         assertThat(apiDriver.libraryDao[player]).containsExactly(
-            OwnedGame(game.platform, game.id, game.name, game.displayImage, 0, 0)
+            OwnedGame(game.uid, 0, apiDriver.time)
         )
-        assertThat(apiDriver.achievementsDao[game]).isEmpty()
+        assertThat(apiDriver.achievementsDao[game.uid]).isEmpty()
     }
 }

@@ -1,5 +1,6 @@
 package io.andrewohara.cheetosbros.sources
 
+import io.andrewohara.cheetosbros.api.games.Uid
 import org.junit.rules.ExternalResource
 import java.time.Instant
 import java.util.*
@@ -24,14 +25,13 @@ class SourceTestDriver: ExternalResource() {
         Platform.Xbox -> xboxSource
     }
 
-    fun source(player: Player) = player.platform.source()
+    fun source(player: Player) = player.uid.platform.source()
 
     fun createPlayer(platform: Platform, displayName: String? = null): Player {
         val id = UUID.randomUUID().toString()
         val player = Player(
-            id = id,
+            uid = Uid(platform, id),
             avatar = null,
-            platform = platform,
             username = displayName ?: "player-$id",
             token = null
         )
@@ -39,20 +39,19 @@ class SourceTestDriver: ExternalResource() {
         return player
     }
 
-    fun createGame(platform: Platform, name: String? = null): Game {
+    fun createGame(platform: Platform, name: String? = null): Source.Game {
         val id = UUID.randomUUID().toString()
-        val game = Game(
-            id = id,
+        val game = Source.Game(
+            uid = Uid(platform, id),
             displayImage = null,
             name = name ?: "game-$id",
-            platform = platform
         )
         platform.source().addGame(game)
 
         return game
     }
 
-    fun createAchievement(game: Game, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
+    fun createAchievement(game: Source.Game, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): Achievement {
         val id = UUID.randomUUID().toString()
         val actualName = name ?: "achievement-$id"
         val achievement = Achievement(
@@ -63,23 +62,23 @@ class SourceTestDriver: ExternalResource() {
             icons = emptyList(),
             score = score
         )
-        game.platform.source().addAchievement(game.id, achievement)
+        game.uid.platform.source().addAchievement(game.uid.id, achievement)
 
         return achievement
     }
 
-    fun unlockAchievement(player: Player, game: Game, achievement: Achievement, unlocked: Instant?): AchievementStatus {
+    fun unlockAchievement(player: Player, game: Source.Game, achievement: Achievement, unlocked: Instant?): AchievementStatus {
         val status = AchievementStatus(
             achievementId = achievement.id,
             unlockedOn = unlocked
         )
 
-        game.platform.source().addUserAchievement(game.id, player.id, status)
+        game.uid.platform.source().addUserAchievement(game.uid.id, player.uid.id, status)
 
         return status
     }
 
-    fun addToLibrary(player: Player, game: Game) {
-        player.platform.source().addGameToLibrary(player.id, game.id)
+    fun addToLibrary(player: Player, game: Source.Game) {
+        player.uid.platform.source().addGameToLibrary(player.uid.id, game.uid.id)
     }
 }

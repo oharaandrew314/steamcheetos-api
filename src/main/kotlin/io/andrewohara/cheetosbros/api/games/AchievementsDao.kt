@@ -1,38 +1,32 @@
-package io.andrewohara.cheetosbros.api.games.v1
+package io.andrewohara.cheetosbros.api.games
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.lib.DynamoUtils
+import io.andrewohara.cheetosbros.lib.UidConverter
 import io.andrewohara.cheetosbros.sources.Achievement
-import io.andrewohara.cheetosbros.sources.Game
 
 class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
 
     val mapper = DynamoUtils.mapper<DynamoAchievement, String, String>(tableName, client)
 
-    operator fun get(game: Game): Collection<Achievement> {
+    operator fun get(gameUid: Uid): Collection<Achievement> {
         val query = DynamoDBQueryExpression<DynamoAchievement>()
-                .withHashKeyValues(DynamoAchievement(gameUuid = game.uuid()))
+                .withHashKeyValues(DynamoAchievement(gameUuid = gameUid))
 
         return mapper.query(query).map { it.toAchievement() }
     }
 
-    fun countAchievements(game: Game): Int {
-        val query = DynamoDBQueryExpression<DynamoAchievement>()
-                .withHashKeyValues(DynamoAchievement(gameUuid = game.uuid()))
-
-        return mapper.count(query)
-    }
-
-    fun batchSave(game: Game, achievements: Collection<Achievement>) {
-        val items = achievements.map { DynamoAchievement(game, it) }
+    fun batchSave(gameId: Uid, achievements: Collection<Achievement>) {
+        val items = achievements.map { DynamoAchievement(gameId, it) }
         mapper.batchSave(items)
     }
 
     @DynamoDBDocument
     data class DynamoAchievement(
             @DynamoDBHashKey
-            var gameUuid: String? = null,
+            @DynamoDBTypeConverted(converter = UidConverter::class)
+            var gameUuid: Uid? = null,
 
             @DynamoDBRangeKey
             var achievementId: String? = null,
@@ -43,8 +37,8 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
             var icons: List<String> = emptyList(),
             var score: Int? = null,
     ) {
-        constructor(game: Game, achievement: Achievement): this(
-                gameUuid = game.uuid(),
+        constructor(gameId: Uid, achievement: Achievement): this(
+                gameUuid = gameId,
                 achievementId = achievement.id,
                 name = achievement.name,
                 description = achievement.description,
@@ -61,9 +55,5 @@ class AchievementsDao(tableName: String, client: AmazonDynamoDB) {
                 icons = icons,
                 score = score
         )
-    }
-
-    companion object {
-        private fun Game.uuid() = "$platform-$id"
     }
 }

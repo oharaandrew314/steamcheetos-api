@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros.api.users
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
+import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.lib.PlatformConverter
 import io.andrewohara.cheetosbros.sources.Platform
@@ -49,16 +50,15 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
         var token: String? = null
     ) {
         constructor(player: Player): this(
-            id = player.id,
-            platform = player.platform,
+            id = player.uid.id,
+            platform = player.uid.platform,
             username = player.username,
             avatar = player.avatar,
             token = player.token
         )
 
         fun toPlayer() = Player(
-            id = id!!,
-            platform = platform!!,
+            uid = Uid(platform!!, id!!),
             username = username!!,
             avatar = avatar,
             token = token

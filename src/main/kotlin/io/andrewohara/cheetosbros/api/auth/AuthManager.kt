@@ -35,7 +35,7 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
     }
 
     private fun createUser(player: Player): User {
-        val user = User(id = UUID.randomUUID().toString(), players = mapOf(player.platform to player))
+        val user = User(id = UUID.randomUUID().toString(), players = mapOf(player.uid.platform to player))
 
         usersDao.save(user)
         socialLinkDao.link(player, user)
@@ -44,7 +44,7 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
     }
 
     private fun linkUser(user: User, player: Player): User {
-        val updated = user.copy(players = user.players + mapOf(player.platform to player))
+        val updated = user.copy(players = user.players + mapOf(player.uid.platform to player))
         usersDao.save(updated)
         socialLinkDao.link(player, updated)
 
