@@ -28,7 +28,7 @@ class SteamSource(private val apiKey: String): Source {
 
     private val client = HttpClient.newHttpClient()
 
-    override fun library(playerId: String): Collection<Source.Game> {
+    override fun library(playerId: String): Collection<GameData> {
         val request = HttpRequest.newBuilder()
                 .uri("IPlayerService","GetOwnedGames", 1, steamId=playerId.toLong(), params = mapOf("include_appinfo" to "1", "include_played_free_games" to "1"))
                 .GET()
@@ -42,11 +42,12 @@ class SteamSource(private val apiKey: String): Source {
         return mapper.adapter(GetOwnedGamesResponse::class.java).fromJson(response.body())!!
                 .response
                 .games
-                .map { game -> Source.Game(
+                .map { game -> GameData(
                         uid = Uid(platform, game.appid.toString()),
                         name = game.name,
                         displayImage = "http://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_logo_url}.jpg"
-                )}
+                )
+                }
     }
 
     override fun achievements(gameId: String): Collection<Achievement> {
@@ -56,6 +57,7 @@ class SteamSource(private val apiKey: String): Source {
                 .build()
 
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() == 403) return emptySet()
         if (response.statusCode() != 200) {
             throw IllegalStateException("Request failed: $response")
         }

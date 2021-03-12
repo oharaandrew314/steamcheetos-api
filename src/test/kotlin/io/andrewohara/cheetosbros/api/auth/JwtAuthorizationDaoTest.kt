@@ -1,22 +1,23 @@
 package io.andrewohara.cheetosbros.api.auth
 
-import io.andrewohara.cheetosbros.api.ApiTestDriver
+import io.andrewohara.cheetosbros.TestDriver
 import io.andrewohara.cheetosbros.api.users.User
 import org.assertj.core.api.Assertions.*
 import org.junit.Rule
 import org.junit.Test
+import java.util.*
 
 class JwtAuthorizationDaoTest {
 
-    @Rule @JvmField val driver = ApiTestDriver
+    @Rule @JvmField val driver = TestDriver
 
     @Test
     fun `resolve valid token`() {
-        val user = User(id = "1337", emptyMap())
+        val user = User(id = UUID.randomUUID(), emptyMap())
 
         val token = driver.authorizationDao.assignToken(user)
 
-        assertThat(driver.authorizationDao.resolveUserId(token)).isEqualTo("1337")
+        assertThat(driver.authorizationDao.resolveUserId(token)).isEqualTo(user.id)
     }
 
     @Test

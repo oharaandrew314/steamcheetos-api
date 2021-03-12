@@ -1,28 +1,23 @@
 package io.andrewohara.cheetosbros
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestHandler
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest
-import io.andrewohara.cheetosbros.sources.SourceFactoryImpl
-import com.amazonaws.services.lambda.runtime.events.SQSEvent
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import io.andrewohara.cheetosbros.api.games.AchievementStatusDao
-import io.andrewohara.cheetosbros.api.games.AchievementsDao
-import io.andrewohara.cheetosbros.api.games.GameLibraryDao
-import io.andrewohara.cheetosbros.api.games.GamesDao
-import io.andrewohara.cheetosbros.sources.SourceManager
-import io.andrewohara.cheetosbros.sync.SqsSyncClient
-import io.andrewohara.cheetosbros.sync.SyncMessage
-import java.time.Duration
+import io.andrewohara.cheetosbros.api.ServiceBuilder
+import io.andrewohara.cheetosbros.lib.PlatformConverter
+import io.andrewohara.cheetosbros.lib.UidConverter
+import io.andrewohara.cheetosbros.sources.*
 import java.time.Instant
+import java.util.*
 
-class SyncLambdaHandler: RequestHandler<SQSEvent, Unit> {
+class SyncLambdaHandler: RequestHandler<DynamodbEvent, Unit> {
 
-    private val syncClient = SqsSyncClient(AmazonSQSClientBuilder.defaultClient(), System.getenv("SYNC_QUEUE_URL"))
+    companion object {
+        private val uidConverter = UidConverter()
+        private val platformConverter = PlatformConverter()
+    }
 
     private val service = let {
         val steamParamName = System.getenv("STEAM_API_KEY_NAME")
@@ -34,35 +29,21 @@ class SyncLambdaHandler: RequestHandler<SQSEvent, Unit> {
 
         val steamApiKey = ssm.getParameter(request).parameter.value
 
-        val dynamoDb = AmazonDynamoDBClientBuilder.defaultClient()
-
-        SourceManager(
-            sourceFactory = SourceFactoryImpl(steamKey = steamApiKey),
-            achievementsDao = AchievementsDao(System.getenv("ACHIEVEMENTS_TABLE"), dynamoDb),
-            achievementStatusDao = AchievementStatusDao(System.getenv("ACHIEVEMENT_STATUS_TABLE"), dynamoDb),
-            gamesDao = GamesDao(System.getenv("GAMES_TABLE"), dynamoDb),
-            gameLibraryDao = GameLibraryDao(System.getenv("LIBRARY_TABLE"), dynamoDb),
-            gameCacheDuration = Duration.ofDays(7),
-            timeSupplier = { Instant.now() }
-        )
+        ServiceBuilder.fromEnv(steamApiKey).jobService
     }
 
-    private val messageMapper = Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
-        .build()
-        .adapter(SyncMessage::class.java)
+    override fun handleRequest(input: DynamodbEvent, context: Context) {
+        for (record in input.records) {
+            val model = record.dynamodb.newImage ?: continue
 
-    override fun handleRequest(input: SQSEvent, context: Context) {
-        input.records
-            .mapNotNull { messageMapper.fromJson(it.body) }
-            .forEach { message ->
-                if (message.game == null) {
-                    for (game in service.discoverGames(message.player)) {
-                        syncClient.syncGame(message.player, game)
-                    }
-                } else {
-                    service.syncGame(message.player, message.game)
-                }
-            }
+            val jobId = model["jobId"]?.let { UUID.fromString(it.s) } ?: continue
+            val job = Job(
+                userId = model["userId"]?.let { UUID.fromString(it.s) } ?: continue,
+                platform = model["platform"]?.let { platformConverter.unconvert(it.s) } ?: continue,
+                gameId = model["gameId"]?.s?.let(uidConverter::unconvert)
+            )
+
+            service.execute(jobId, job, Instant.now())
+        }
     }
 }

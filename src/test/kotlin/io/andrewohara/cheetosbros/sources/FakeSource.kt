@@ -2,16 +2,14 @@ package io.andrewohara.cheetosbros.sources
 
 import java.lang.IllegalArgumentException
 
-import io.andrewohara.cheetosbros.sources.Source.Game
-
 class FakeSource(override val platform: Platform): Source {
 
     private val players = mutableMapOf<String, Player>()
-    private val games = mutableMapOf<String, Game>()
+    private val games = mutableMapOf<String, GameData>()
 
-    private val userGames = mutableMapOf<Player, MutableSet<Game>>()
-    private val achievements = mutableMapOf<Game, MutableSet<Achievement>>()
-    private val userAchievements = mutableMapOf<Pair<Game, Player>, MutableSet<AchievementStatus>>()
+    private val userGames = mutableMapOf<Player, MutableSet<GameData>>()
+    private val achievements = mutableMapOf<GameData, MutableSet<Achievement>>()
+    private val userAchievements = mutableMapOf<Pair<GameData, Player>, MutableSet<AchievementStatus>>()
 
     override fun getPlayer(playerId: String): Player? {
         return players[playerId]
@@ -22,18 +20,18 @@ class FakeSource(override val platform: Platform): Source {
         userGames[player] = mutableSetOf()
     }
 
-    override fun library(playerId: String): Collection<Game> {
+    override fun library(playerId: String): Collection<GameData> {
         val player = getPlayer(playerId) ?: throw IllegalArgumentException("Player $playerId does not exist")
         return userGames.getValue(player)
     }
 
-    private fun game(appId: String): Game {
+    private fun game(appId: String): GameData {
         return games[appId] ?: throw IllegalArgumentException("Game $appId does not exist")
     }
 
-    fun addGame(game: Game) {
-        games[game.uid.id] = game
-        achievements[game] = mutableSetOf()
+    fun addGame(gameData: GameData) {
+        games[gameData.uid.id] = gameData
+        achievements[gameData] = mutableSetOf()
     }
 
     fun addGameToLibrary(playerId: String, appId: String) {

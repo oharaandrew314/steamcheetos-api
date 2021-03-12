@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.v1
 
-import io.andrewohara.cheetosbros.api.ApiTestDriver
+import io.andrewohara.cheetosbros.TestDriver
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.sources.Platform
 import org.assertj.core.api.Assertions.assertThat
@@ -14,18 +14,19 @@ import java.net.http.HttpResponse
 
 class GamesApiV1Test {
 
-    @Rule @JvmField val driver = ApiTestDriver
+    @Rule @JvmField val driver = TestDriver
 
     private val client = HttpClient.newHttpClient()
-    private val moshi = GamesApiV1.JsonMapper.moshi
 
-    private val gamesMapper = moshi.adapter(Array<OwnedGameDetailsDtoV1>::class.java)
+    private val gamesMapper = GamesApiV1.JsonMapper.moshi.adapter(Array<OwnedGameDetailsDtoV1>::class.java)
 
     @Test
     fun `list games`() {
-        val user = driver.createUser(steam = driver.steamPlayer1)
-        val game = driver.createGame(Platform.Steam, 3)
-        driver.addToLibrary(driver.steamPlayer1, game, 1)
+        val user = driver.saveUser(steam = true)
+        val player = user.players.getValue(Platform.Steam)
+
+        val game = driver.saveGame(Platform.Steam, 3)
+        driver.saveToLibrary(player, game, 1)
 
         val request = HttpRequest
             .newBuilder(URI.create("http://localhost:${Spark.port()}/v1/games"))

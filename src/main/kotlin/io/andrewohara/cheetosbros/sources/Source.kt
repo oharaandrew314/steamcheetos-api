@@ -13,6 +13,12 @@ data class Player(
 
 enum class Platform { Steam, Xbox }
 
+data class GameData(
+    val uid: Uid,
+    val name: String,
+    val displayImage: String?
+)
+
 data class Achievement(
         val id: String,
         val name: String,
@@ -32,15 +38,10 @@ interface Source {
 
     fun getPlayer(playerId: String): Player?
     fun getFriends(playerId: String): Collection<String>
-    fun library(playerId: String): Collection<Game>
+    fun library(playerId: String): Collection<GameData>
     fun achievements(gameId: String): Collection<Achievement>
     fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus>
 
-    data class Game(
-        val uid: Uid,
-        val name: String,
-        val displayImage: String?
-    )
 }
 
 class SourceAccessDenied(message: String): Exception(message)

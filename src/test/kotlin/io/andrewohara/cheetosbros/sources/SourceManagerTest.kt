@@ -1,80 +1,73 @@
 package io.andrewohara.cheetosbros.sources
 
-import io.andrewohara.cheetosbros.api.ApiTestDriver
+import io.andrewohara.cheetosbros.TestDriver
 import io.andrewohara.cheetosbros.api.games.CachedGame
 import io.andrewohara.cheetosbros.api.games.OwnedGame
 import org.assertj.core.api.Assertions.*
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.time.Duration
 import java.time.Instant
 
 class SourceManagerTest {
 
-    @Rule @JvmField val apiDriver = ApiTestDriver
-    @Rule @JvmField val sourceDriver = SourceTestDriver()
+    @Rule @JvmField val driver = TestDriver
 
     private lateinit var testObj: SourceManager
 
     @Before
     fun setup() {
-        testObj = SourceManager(
-            sourceFactory = sourceDriver.sourceFactory,
-            gamesDao = apiDriver.gamesDao,
-            gameLibraryDao = apiDriver.libraryDao,
-            achievementsDao = apiDriver.achievementsDao,
-            achievementStatusDao = apiDriver.achievementStatusDao,
-            gameCacheDuration = Duration.ofSeconds(30),
-            timeSupplier = { apiDriver.time }
-        )
+        testObj = driver.sourceManager
     }
 
     @Test
     fun `sync multiple games`() {
-        val player = sourceDriver.createPlayer(Platform.Steam)
+        val player = driver.createPlayer(Platform.Steam)
 
-        val game1 = sourceDriver.createGame(player.uid.platform)
-        val game1Achievement = sourceDriver.createAchievement(game1)
-        sourceDriver.addToLibrary(player, game1)
-        sourceDriver.unlockAchievement(player, game1, game1Achievement, apiDriver.time)
+        val gameData1 = driver.createGame(player.uid.platform)
+        val game1Achievement = driver.createAchievement(gameData1)
+        driver.addToLibrary(player, gameData1)
+        driver.unlockAchievement(player, gameData1, game1Achievement, driver.time)
+        val game1 = driver.saveGame(gameData1)
 
-        val game2 = sourceDriver.createGame(Platform.Steam)
-        val game2Achievement = sourceDriver.createAchievement(game2)
-        sourceDriver.addToLibrary(player, game2)
+        val gameData2 = driver.createGame(Platform.Steam)
+        val game2Achievement = driver.createAchievement(gameData2)
+        driver.addToLibrary(player, gameData2)
+        val game2 = driver.saveGame(gameData2)
 
-        sourceDriver.createGame(Platform.Steam)
+        driver.createGame(Platform.Steam)
 
-        testObj.syncGame(player, game1)
-        testObj.syncGame(player, game2)
+        testObj.syncGame(player, game1, driver.time)
+        testObj.syncGame(player, game2, driver.time)
 
-        assertThat(apiDriver.libraryDao[player]).containsExactlyInAnyOrder(
-            OwnedGame(game1.uid, 1, apiDriver.time),
-            OwnedGame(game2.uid, 0, apiDriver.time)
+        assertThat(driver.libraryDao[player]).containsExactlyInAnyOrder(
+            OwnedGame(gameData1.uid, 1, driver.time),
+            OwnedGame(gameData2.uid, 0, driver.time)
         )
-        assertThat(apiDriver.gamesDao.batchGet(listOf(game1.uid, game2.uid))).containsExactlyInAnyOrder(
-            CachedGame.create(game1, 1, apiDriver.time),
-            CachedGame.create(game2, 1, apiDriver.time)
+        assertThat(driver.gamesDao.batchGet(listOf(gameData1.uid, gameData2.uid))).containsExactlyInAnyOrder(
+            CachedGame.create(gameData1, 1, driver.time),
+            CachedGame.create(gameData2, 1, driver.time)
         )
-        assertThat(apiDriver.achievementsDao[game1.uid]).containsExactly(game1Achievement)
-        assertThat(apiDriver.achievementsDao[game2.uid]).containsExactly(game2Achievement)
+        assertThat(driver.achievementsDao[gameData1.uid]).containsExactly(game1Achievement)
+        assertThat(driver.achievementsDao[gameData2.uid]).containsExactly(game2Achievement)
     }
 
     @Test
     fun `sync game where user has partial progress with achievements`() {
-        val player = sourceDriver.createPlayer(Platform.Steam)
+        val player = driver.createPlayer(Platform.Steam)
 
-        val game = sourceDriver.createGame(Platform.Steam)
-        sourceDriver.addToLibrary(player, game)
-        val achievement1 = sourceDriver.createAchievement(game, "Complete the Tutorial")
-        val achievement2 = sourceDriver.createAchievement(game, "Complete the Game")
-        val status1 = sourceDriver.unlockAchievement(player, game, achievement1, Instant.ofEpochSecond(1000))
+        val gameData = driver.createGame(Platform.Steam)
+        driver.addToLibrary(player, gameData)
+        val game = driver.saveGame(gameData)
+        val achievement1 = driver.createAchievement(gameData, "Complete the Tutorial")
+        val achievement2 = driver.createAchievement(gameData, "Complete the Game")
+        val status1 = driver.unlockAchievement(player, gameData, achievement1, Instant.ofEpochSecond(1000))
 
-        testObj.syncGame(player, game)
+        testObj.syncGame(player, game, driver.time)
 
-        assertThat(apiDriver.gamesDao[game.uid]).isEqualTo(CachedGame.create(game, 2, apiDriver.time))
-        assertThat(apiDriver.achievementsDao[game.uid]).containsExactlyInAnyOrder(achievement1, achievement2)
-        assertThat(apiDriver.achievementStatusDao[player.uid, game.uid]).containsExactlyInAnyOrder(
+        assertThat(driver.gamesDao[gameData.uid]).isEqualTo(CachedGame.create(gameData, 2, driver.time))
+        assertThat(driver.achievementsDao[gameData.uid]).containsExactlyInAnyOrder(achievement1, achievement2)
+        assertThat(driver.achievementStatusDao[player.uid, gameData.uid]).containsExactlyInAnyOrder(
             status1,
             AchievementStatus(achievementId = achievement2.id, unlockedOn = null)
         )
@@ -82,17 +75,18 @@ class SourceManagerTest {
 
     @Test
     fun `sync game with no achievements`() {
-        val player = sourceDriver.createPlayer(Platform.Steam)
+        val player = driver.createPlayer(Platform.Steam)
 
-        val game = sourceDriver.createGame(Platform.Steam)
-        sourceDriver.addToLibrary(player, game)
+        val gameData = driver.createGame(Platform.Steam)
+        driver.addToLibrary(player, gameData)
+        val game = driver.saveGame(gameData)
 
-        testObj.syncGame(player, game)
+        testObj.syncGame(player, game, driver.time)
 
-        assertThat(apiDriver.gamesDao[game.uid]).isEqualTo(CachedGame.create(game, 0, apiDriver.time))
-        assertThat(apiDriver.libraryDao[player]).containsExactly(
-            OwnedGame(game.uid, 0, apiDriver.time)
+        assertThat(driver.gamesDao[gameData.uid]).isEqualTo(CachedGame.create(gameData, 0, driver.time))
+        assertThat(driver.libraryDao[player]).containsExactly(
+            OwnedGame(gameData.uid, 0, driver.time)
         )
-        assertThat(apiDriver.achievementsDao[game.uid]).isEmpty()
+        assertThat(driver.achievementsDao[gameData.uid]).isEmpty()
     }
 }

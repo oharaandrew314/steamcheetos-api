@@ -34,7 +34,6 @@ dependencies {
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
     implementation "com.amazonaws:aws-java-sdk-dynamodb:${ver.aws}"
     implementation "com.amazonaws:aws-java-sdk-ssm:${ver.aws}"
-    implementation "com.amazonaws:aws-java-sdk-sqs:${ver.aws}"
     implementation 'com.auth0:java-jwt:3.10.3'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: ver.slf4j
     runtime group: 'org.slf4j', name: 'slf4j-api', version: ver.slf4j

@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.games
 
-import io.andrewohara.cheetosbros.api.ApiTestDriver
+import io.andrewohara.cheetosbros.TestDriver
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.sources.*
 import org.assertj.core.api.Assertions.*
@@ -8,10 +8,11 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
+import java.util.*
 
 class GamesManagerTest {
 
-    @Rule @JvmField val driver = ApiTestDriver
+    @Rule @JvmField val driver = TestDriver
 
     private lateinit var testObj: GamesManager
 
@@ -28,22 +29,22 @@ class GamesManagerTest {
     fun setup() {
         testObj = driver.gamesManager
 
-        steamPlayer = driver.createPlayer(Platform.Steam)
-        xboxPLayer = driver.createPlayer(Platform.Xbox)
-        user = driver.createUser(xbox = xboxPLayer, steam = steamPlayer)
+        user = driver.saveUser(xbox = true, steam = true)
+        steamPlayer = user.players.getValue(Platform.Steam)
+        xboxPLayer = user.players.getValue(Platform.Xbox)
 
-        me3 = driver.createGame(Platform.Xbox, 3,"Mass Effect 3")
+        me3 = driver.saveGame(Platform.Xbox, 3,"Mass Effect 3")
         me3Achievements = arrayOf(
-                driver.createAchievement(me3, name = "It's a blue alien babe!", description = "Recruit Liara"),
-                driver.createAchievement(me3, name = "The Dinosaurs are extinct", description = "Headbutt a Krogan"),
-                driver.createAchievement(me3, name = "Did we win?", description = "Choose the colour of your ending")
+                driver.saveAchievement(me3, name = "It's a blue alien babe!", description = "Recruit Liara"),
+                driver.saveAchievement(me3, name = "The Dinosaurs are extinct", description = "Headbutt a Krogan"),
+                driver.saveAchievement(me3, name = "Did we win?", description = "Choose the colour of your ending")
         )
 
-        satisfactory = driver.createGame(Platform.Steam, 3, "Satisfactory")
+        satisfactory = driver.saveGame(Platform.Steam, 3, "Satisfactory")
         satisfactoryAchievements = arrayOf(
-                driver.createAchievement(satisfactory, name = "Choo!", description = "Build a train locomotive"),
-                driver.createAchievement(satisfactory, name = "3.6 Roentgen", description = "Detonate a nobelisk on a nuclear power plant"),
-                driver.createAchievement(satisfactory, name = "You are feeling very sleepy", description = "Collect a Mercer Sphere")
+                driver.saveAchievement(satisfactory, name = "Choo!", description = "Build a train locomotive"),
+                driver.saveAchievement(satisfactory, name = "3.6 Roentgen", description = "Detonate a nobelisk on a nuclear power plant"),
+                driver.saveAchievement(satisfactory, name = "You are feeling very sleepy", description = "Collect a Mercer Sphere")
         )
     }
 
@@ -51,14 +52,14 @@ class GamesManagerTest {
 
     @Test
     fun `list games for missing user`() {
-        val user = User(id = "missingId", players = emptyMap())
+        val user = User(id = UUID.randomUUID(), players = emptyMap())
         assertThat(testObj.listGames(user)).isEmpty()
     }
 
     @Test
     fun `list games`() {
-        val owned1 = driver.addToLibrary(xboxPLayer, me3, 3)
-        val owned2 = driver.addToLibrary(steamPlayer, satisfactory, 3)
+        val owned1 = driver.saveToLibrary(xboxPLayer, me3, 3)
+        val owned2 = driver.saveToLibrary(steamPlayer, satisfactory, 3)
         assertThat(testObj.listGames(user)).containsExactlyInAnyOrder(owned1, owned2)
     }
 
@@ -71,9 +72,9 @@ class GamesManagerTest {
 
     @Test
     fun `list achievements`() {
-        driver.addToLibrary(xboxPLayer, me3, 3)
-        val progress1 = driver.unlockAchievement(xboxPLayer, me3, me3Achievements[0], Instant.ofEpochSecond(9001))
-        val progress2 = driver.unlockAchievement(xboxPLayer, me3, me3Achievements[1], Instant.ofEpochSecond(50000))
+        driver.saveToLibrary(xboxPLayer, me3, 3)
+        val progress1 = driver.saveProgress(xboxPLayer, me3, me3Achievements[0], Instant.ofEpochSecond(9001))
+        val progress2 = driver.saveProgress(xboxPLayer, me3, me3Achievements[1], Instant.ofEpochSecond(50000))
 
         assertThat(testObj.listAchievements(user, me3.uid.platform, me3.uid.id)).containsExactlyInAnyOrder(
             progress1,
@@ -91,13 +92,13 @@ class GamesManagerTest {
 
     @Test
     fun `get game from wrong platform`() {
-        driver.addToLibrary(steamPlayer, satisfactory, 3)
+        driver.saveToLibrary(steamPlayer, satisfactory, 3)
         assertThat(testObj.getGame(xboxPLayer, satisfactory.uid.id)).isNull()
     }
 
     @Test
     fun `get game`() {
-        val owned = driver.addToLibrary(steamPlayer, satisfactory, 3)
+        val owned = driver.saveToLibrary(steamPlayer, satisfactory, 3)
         assertThat(testObj.getGame(steamPlayer, satisfactory.uid.id)).isEqualTo(owned)
     }
 }

@@ -6,8 +6,10 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConverted
 import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.lib.DynamoUtils
+import io.andrewohara.cheetosbros.lib.UUIDConverter
 import io.andrewohara.cheetosbros.lib.UidConverter
 import io.andrewohara.cheetosbros.sources.Player
+import java.util.*
 
 class SocialLinkDao(dynamo: AmazonDynamoDB, tableName: String) {
 
@@ -18,7 +20,7 @@ class SocialLinkDao(dynamo: AmazonDynamoDB, tableName: String) {
         mapper.save(item)
     }
 
-    fun lookupUserId(player: Player): String? {
+    fun lookupUserId(player: Player): UUID? {
         return mapper.load(player.uid)?.userId
     }
 }
@@ -29,5 +31,6 @@ data class DynamoSocialLink(
     @DynamoDBTypeConverted(converter = UidConverter::class)
     var playerUuid: Uid? = null,
 
-    var userId: String? = null
+    @DynamoDBTypeConverted(converter = UUIDConverter::class)
+    var userId: UUID? = null
 )

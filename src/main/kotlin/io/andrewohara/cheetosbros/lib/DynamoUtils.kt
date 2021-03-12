@@ -8,6 +8,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConverter
 import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.sources.Platform
 import java.time.Instant
+import java.util.*
 
 object DynamoUtils {
 
@@ -41,4 +42,9 @@ class UidConverter: DynamoDBTypeConverter<String, Uid> {
         val (platform, id) = serialized.split("-", limit = 2)
         return Uid(Platform.valueOf(platform), id)
     }
+}
+
+class UUIDConverter: DynamoDBTypeConverter<String, UUID> {
+    override fun convert(uuid: UUID) = uuid.toString()
+    override fun unconvert(serialized: String): UUID = UUID.fromString(serialized)
 }

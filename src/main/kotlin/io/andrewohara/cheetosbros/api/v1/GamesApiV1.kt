@@ -4,20 +4,22 @@ import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.andrewohara.cheetosbros.api.games.GamesManager
+import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.api.users.User
 import io.andrewohara.cheetosbros.lib.IsoInstantJsonAdapter
+import io.andrewohara.cheetosbros.sources.JobService
 import io.andrewohara.cheetosbros.sources.Platform
-import io.andrewohara.cheetosbros.sync.SyncClient
-import org.eclipse.jetty.util.Promise
 import spark.Request
 import spark.Response
 import spark.ResponseTransformer
 import spark.Spark.*
 import java.lang.IllegalArgumentException
+import java.time.Instant
 
 class GamesApiV1(
     private val gamesManager: GamesManager,
-    private val syncClient: SyncClient
+    private val jobService: JobService,
+    private val time: () -> Instant
 ) {
 
     private val mapper = DtoMapperImpl()
@@ -30,6 +32,8 @@ class GamesApiV1(
 
         // sync
         post("/v1/sync", ::sync)
+        get("/v1/sync", ::countJobs, JsonMapper)
+        post("/v1/sync/:platform/:game_id", ::syncGame)
     }
 
     object JsonMapper : ResponseTransformer {
@@ -81,8 +85,25 @@ class GamesApiV1(
         val user = request.attribute<User>("user") ?: throw halt(401)
 
         for (player in user.players.values) {
-            syncClient.sync(player)
+            jobService.insertDiscoveryJob(user, player, time())
         }
+    }
+
+    private fun syncGame(request: Request, response: Response) {
+        val user = request.attribute<User>("user") ?: throw halt(401)
+        val platform = request.params("platform").toPlatform()
+        val gameId = request.params("game_id")
+
+        val uid = Uid(platform, gameId)
+        jobService.insertSyncGameJob(user, uid, time())
+    }
+
+    private fun countJobs(request: Request, response: Response): JobStatusDtoV1 {
+        val user = request.attribute<User>("user") ?: throw halt(401)
+
+        val count = jobService.countJobsInProgress(user.id)
+
+        return JobStatusDtoV1(count = count)
     }
 
     private fun String.toPlatform() = try {

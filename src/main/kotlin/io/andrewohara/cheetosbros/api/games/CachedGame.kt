@@ -1,6 +1,6 @@
 package io.andrewohara.cheetosbros.api.games
 
-import io.andrewohara.cheetosbros.sources.Source
+import io.andrewohara.cheetosbros.sources.GameData
 import java.time.Instant
 
 data class CachedGame(
@@ -9,13 +9,13 @@ data class CachedGame(
     val displayImage: String?,
 
     val achievements: Int,
-    val lastUpdated: Instant
+    val lastUpdated: Instant?
 ) {
     companion object {
-        fun create(game: Source.Game, achievements: Int, lastUpdated: Instant) = CachedGame(
-            uid = game.uid,
-            name = game.name,
-            displayImage = game.displayImage,
+        fun create(gameData: GameData, achievements: Int, lastUpdated: Instant?) = CachedGame(
+            uid = gameData.uid,
+            name = gameData.name,
+            displayImage = gameData.displayImage,
             achievements = achievements,
             lastUpdated = lastUpdated
         )

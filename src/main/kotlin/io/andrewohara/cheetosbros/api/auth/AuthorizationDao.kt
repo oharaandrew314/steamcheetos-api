@@ -9,10 +9,11 @@ import io.andrewohara.cheetosbros.lib.PemUtils
 import org.slf4j.LoggerFactory
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
+import java.util.*
 
 interface AuthorizationDao {
 
-    fun resolveUserId(token: String): String?
+    fun resolveUserId(token: String): UUID?
     fun assignToken(user: User): String
 }
 
@@ -29,7 +30,7 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: ByteArray, pub
         )
     }
 
-    override fun resolveUserId(token: String): String? {
+    override fun resolveUserId(token: String): UUID? {
         val verifier = JWT.require(algorithm)
                 .withIssuer(issuer)
                 .build()
@@ -44,7 +45,7 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: ByteArray, pub
             return null
         }
 
-        return decoded.subject
+        return UUID.fromString(decoded.subject)
     }
 
     override fun assignToken(user: User): String {
@@ -54,7 +55,7 @@ class JwtAuthorizationDao(private val issuer: String, privateKey: ByteArray, pub
 
         val builder = JWT.create().apply {
             withIssuer(issuer)
-            withSubject(user.id)
+            withSubject(user.id.toString())
             withClaim("displayName", user.displayName())
             withClaim("avatar", avatar)
         }

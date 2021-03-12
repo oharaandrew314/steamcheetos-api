@@ -2,9 +2,11 @@ package io.andrewohara.cheetosbros.api.games
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
 import com.amazonaws.services.dynamodbv2.datamodeling.*
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.lib.IsoInstantConverter
 import io.andrewohara.cheetosbros.lib.UidConverter
+import io.andrewohara.cheetosbros.sources.GameData
 import org.mapstruct.InheritInverseConfiguration
 import org.mapstruct.Mapper
 import org.mapstruct.Mapping
@@ -34,6 +36,23 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
             .map { dtoMapper.toModel(it) }
     }
 
+    fun create(data: GameData) {
+        val item = DynamoGame(
+            uuid = data.uid,
+            name = data.name,
+            displayImage = data.displayImage,
+
+            achievements = 0,
+            lastUpdated = null
+        )
+
+        try {
+            mapper.saveIfNotExists(item)
+        } catch (e: ConditionalCheckFailedException) {
+            // no-op
+        }
+    }
+
     @DynamoDBDocument
     data class DynamoGame(
             @DynamoDBHashKey
@@ -46,7 +65,7 @@ class GamesDao(tableName: String, client: AmazonDynamoDB) {
             var achievements: Int = 0,
 
             @DynamoDBTypeConverted(converter = IsoInstantConverter::class)
-            var lastUpdated: Instant = Instant.MIN
+            var lastUpdated: Instant? = null
     )
 }
 

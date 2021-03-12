@@ -5,15 +5,17 @@ import com.amazonaws.services.dynamodbv2.datamodeling.*
 import io.andrewohara.cheetosbros.api.games.Uid
 import io.andrewohara.cheetosbros.lib.DynamoUtils
 import io.andrewohara.cheetosbros.lib.PlatformConverter
+import io.andrewohara.cheetosbros.lib.UUIDConverter
 import io.andrewohara.cheetosbros.sources.Platform
 import io.andrewohara.cheetosbros.sources.Player
+import java.util.*
 
 class UsersDao(tableName: String, client: AmazonDynamoDB) {
 
-    val mapper = DynamoUtils.mapper<DynamoUser, String, Void>(tableName, client)
+    val mapper = DynamoUtils.mapper<DynamoUser, UUID, Void>(tableName, client)
 
-    operator fun get(cheetosUserId: String): User? {
-        return mapper.load(cheetosUserId)?.toUser()
+    operator fun get(uuid: UUID): User? {
+        return mapper.load(uuid)?.toUser()
     }
 
     fun save(user: User) {
@@ -24,7 +26,9 @@ class UsersDao(tableName: String, client: AmazonDynamoDB) {
     @DynamoDBDocument
     data class DynamoUser(
             @DynamoDBHashKey
-            var id: String? = null,
+            @DynamoDBTypeConverted(converter = UUIDConverter::class)
+            var id: UUID? = null,
+
             var players: List<DynamoPlayer> = emptyList()
     ) {
         fun toUser() = User(

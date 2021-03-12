@@ -27,6 +27,10 @@ data class AchievementDetailsDtoV1(
     val unlocked: Boolean
 )
 
+data class JobStatusDtoV1(
+    val count: Int
+)
+
 @Mapper
 interface DtoMapper {
     fun toDtoV1(gameDetails: OwnedGameDetails): OwnedGameDetailsDtoV1
