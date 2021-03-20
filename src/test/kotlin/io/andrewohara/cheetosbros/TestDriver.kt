@@ -4,16 +4,13 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTableMapper
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput
 import io.andrewohara.awsmock.dynamodb.MockAmazonDynamoDB
-import io.andrewohara.cheetosbros.api.auth.AuthManager
+import io.andrewohara.cheetosbros.api.ServiceBuilder
 import io.andrewohara.cheetosbros.api.auth.JwtAuthorizationDao
 import io.andrewohara.cheetosbros.api.games.*
 import io.andrewohara.cheetosbros.lib.PemUtils
 import io.andrewohara.cheetosbros.api.users.*
-import io.andrewohara.cheetosbros.api.v1.GamesApiV1
 import io.andrewohara.cheetosbros.sources.*
 import org.junit.rules.ExternalResource
-import spark.Spark
-import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -27,7 +24,7 @@ object TestDriver: ExternalResource() {
         mapper.createTable(ProvisionedThroughput(1, 1))
     }
 
-    val usersDao = UsersDao("users", dynamoDb).apply {
+    private val usersDao = UsersDao("users", dynamoDb).apply {
         mapper.createTable(ProvisionedThroughput(1, 1))
     }
 
@@ -47,48 +44,35 @@ object TestDriver: ExternalResource() {
         mapper.createTable(ProvisionedThroughput(1, 1))
     }
 
-    val jobsDao = JobsDao(dynamoDb, "jobs").apply {
+    private val jobsDao = JobsDao(dynamoDb, "jobs").apply {
         tableMapper.createTable(ProvisionedThroughput(1, 1))
     }
 
     val authorizationDao = JwtAuthorizationDao(
-            issuer = "cheetosbros-test",
-            privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
-            publicKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test-pub.pem")!!)!!
+        issuer = "cheetosbros-test",
+        privateKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test.pem")!!)!!,
+        publicKey = PemUtils.parsePEMFile(javaClass.classLoader.getResource("auth/cheetosbros-test-pub.pem")!!)!!
     )
 
     private val steamSource = FakeSource(Platform.Steam)
     private val xboxSource = FakeSource(Platform.Xbox)
 
-    private val sourceFactory = FakeSourceFactory(
-        steamSource = steamSource,
-        xboxSource = xboxSource
-    )
-
-    val sourceManager = SourceManager(
-        sourceFactory = sourceFactory,
+    private val builder = ServiceBuilder(
         gamesDao = gamesDao,
-        gameLibraryDao = libraryDao,
+        libraryDao = libraryDao,
         achievementsDao = achievementsDao,
-        achievementStatusDao = achievementStatusDao,
-        gameCacheDuration = Duration.ofSeconds(30),
-        usersDao = usersDao
+        jobsDao = jobsDao,
+        progressDao = achievementStatusDao,
+        usersDao = usersDao,
+        socialLinkDao = socialLinkDao,
+        frontendHost = "http://localhost:3000",
+        steamSource = steamSource,
+        sourceFactory = SourceFactoryImpl(steamSource)
     )
 
-    val jobService = JobService(sourceManager, jobsDao)
-    val gamesManager = GamesManager(gamesDao, libraryDao, achievementsDao, achievementStatusDao)
-    private val authManager = AuthManager(authorizationDao, usersDao, socialLinkDao)
-
-    private fun Platform.source() = when(this) {
-        Platform.Steam -> steamSource
-        Platform.Xbox -> xboxSource
-    }
-
-    override fun before() {
-        GamesApiV1(gamesManager, jobService) { time }
-        Spark.before(authManager)
-        Spark.awaitInitialization()
-    }
+    val sourceManager = builder.sourceManager
+    val gamesManager = builder.gamesManager
+    val app = builder.createHttp(authorizationDao)
 
     override fun after() {
         fun <T> DynamoDBTableMapper<T, *, *>.clear() {
@@ -106,8 +90,6 @@ object TestDriver: ExternalResource() {
 
         steamSource.clear()
         xboxSource.clear()
-
-        Spark.awaitStop()
     }
 
     fun saveGame(platform: Platform, achievements: Int, name: String? = null): CachedGame {
@@ -187,9 +169,14 @@ object TestDriver: ExternalResource() {
         return user
     }
 
-    // sources
+    /////////////
+    // sources //
+    /////////////
 
-    fun source(player: Player) = player.uid.platform.source()
+    private fun Platform.source() = when(this) {
+        Platform.Steam -> steamSource
+        Platform.Xbox -> xboxSource
+    }
 
     fun createPlayer(platform: Platform, displayName: String? = null): Player {
         val id = UUID.randomUUID().toString()

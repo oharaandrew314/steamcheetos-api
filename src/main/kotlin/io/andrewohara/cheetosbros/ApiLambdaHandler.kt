@@ -1,25 +1,18 @@
 package io.andrewohara.cheetosbros
 
-import com.amazonaws.serverless.proxy.spark.SparkLambdaContainerHandler
-import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagementClientBuilder
 import com.amazonaws.services.simplesystemsmanagement.model.GetParametersRequest
-import io.andrewohara.cheetosbros.api.AuthBuilder
 import io.andrewohara.cheetosbros.api.ServiceBuilder
-import java.io.InputStream
-import java.io.OutputStream
+import org.http4k.core.HttpHandler
+import org.http4k.serverless.ApiGatewayV2LambdaFunction
+import org.http4k.serverless.AppLoader
 
-class ApiLambdaHandler: RequestStreamHandler {
+object ApiLambdaLoader: AppLoader {
 
-    companion object {
-        private val handler = SparkLambdaContainerHandler.getHttpApiV2ProxyHandler()
-    }
-
-    init {
-        val steamParamName = System.getenv("STEAM_API_KEY_NAME")
-        val publicPemName = System.getenv("PUBLIC_PEM_NAME")
-        val privatePemName = System.getenv("PRIVATE_PEM_NAME")
+    override fun invoke(env: Map<String, String>): HttpHandler {
+        val steamParamName = env.getValue("STEAM_API_KEY_NAME")
+        val publicPemName = env.getValue("PUBLIC_PEM_NAME")
+        val privatePemName = env.getValue("PRIVATE_PEM_NAME")
 
         val ssm = AWSSimpleSystemsManagementClientBuilder.defaultClient()
         val request = GetParametersRequest()
@@ -33,20 +26,16 @@ class ApiLambdaHandler: RequestStreamHandler {
         val publicKey = params.first { it.name == publicPemName }.value
         val issuer = System.getenv("PEM_ISSUER")
 
-        val services = ServiceBuilder.fromEnv(steamKey = steamKey)
+        val services = ServiceBuilder.fromProps(env + mapOf("STEAM_API_KEY" to steamKey))
 
-        val auth = AuthBuilder.buildJwt(
-            publicKeyIssuer = issuer,
+        val authDao = services.createJwtAuth(
+            issuer = issuer,
             privateKey = privateKey,
-            publicKey = publicKey,
-            socialLinkDao = services.socialLinks,
-            usersDao = services.usersDao
+            publicKey = publicKey
         )
 
-        services.startSpark(auth, decodeQueryParams = true)
-    }
-
-    override fun handleRequest(input: InputStream, output: OutputStream, context: Context) {
-        handler.proxyStream(input, output, context)
+        return services.createHttp(authDao)
     }
 }
+
+class ApiLambdaHandler: ApiGatewayV2LambdaFunction(ApiLambdaLoader)

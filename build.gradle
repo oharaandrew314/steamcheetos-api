@@ -24,11 +24,11 @@ tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
 }
 
 dependencies {
+    implementation platform("org.http4k:http4k-bom:4.5.0.1")
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "com.sparkjava:spark-core:2.9.3"
     implementation 'com.amazonaws:aws-lambda-java-core:1.2.1'
     implementation 'com.amazonaws:aws-lambda-java-events:3.7.0'
-    implementation 'com.amazonaws.serverless:aws-serverless-java-container-spark:1.5.2'
     implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation group: 'org.openid4java', name: 'openid4java', version: '1.0.0'
 //    implementation group: 'com.microsoft.azure', name: 'msal4j', version: '1.6.1'
@@ -39,6 +39,9 @@ dependencies {
     runtime group: 'org.slf4j', name: 'slf4j-api', version: ver.slf4j
     implementation "org.mapstruct:mapstruct:${ver.mapstruct}"
     kapt "org.mapstruct:mapstruct-processor:${ver.mapstruct}"
+    implementation "org.http4k:http4k-core"
+    implementation "org.http4k:http4k-serverless-lambda"
+    implementation "org.http4k:http4k-format-moshi"
 
     testImplementation group: 'junit', name: 'junit', version: '4.12'
     testImplementation 'org.assertj:assertj-core:3.13.2'

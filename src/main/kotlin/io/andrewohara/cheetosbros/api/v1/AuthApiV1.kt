@@ -4,63 +4,68 @@ import io.andrewohara.cheetosbros.api.auth.AuthManager
 import io.andrewohara.cheetosbros.api.auth.SteamOpenID
 import io.andrewohara.cheetosbros.api.users.User
 import org.apache.http.client.utils.URIBuilder
-import spark.Request
-import spark.Response
-import spark.Spark.*
-import java.net.URLDecoder
+import org.http4k.core.Method
+import org.http4k.core.Request
+import org.http4k.core.Status.Companion.FOUND
+import org.http4k.core.Status.Companion.UNAUTHORIZED
+import org.http4k.core.Status.Companion.FORBIDDEN
+import org.http4k.core.Response
+import org.http4k.lens.RequestContextLens
+import org.http4k.routing.bind
+import org.http4k.routing.routes
 
 class AuthApiV1(
     private val authManager: AuthManager,
     private val steamOpenId: SteamOpenID,
     private val frontendHost: String,
-    private val decodeQueryParams: Boolean
+    private val userLens: RequestContextLens<User?>,
+//    private val decodeQueryParams: Boolean
     ) {
 
-    init {
-        before(authManager)
+    fun getRoutes() = routes(
+        "/v1/auth/steam/login" bind Method.GET to ::loginSteam,
+        "/v1/auth/steam/callback" bind Method.GET to ::callbackSteam
+    )
 
-        // steam
-        get("/v1/auth/steam/login", ::loginSteam)
-        get("/v1/auth/steam/callback", ::callbackSteam)
-    }
+    private fun loginSteam(request: Request): Response {
 
-    private fun loginSteam(request: Request, response: Response) {
-        val steamRedirectUrl = URIBuilder().apply {
-            scheme = request.scheme()
-            host = request.host()
+        val steamRedirectUrl = URIBuilder(request.uri.toString()).apply {
             path = "/v1/auth/steam/callback"
         }.build().toString()
 
         val loginUrl = steamOpenId.getLoginUrl(steamRedirectUrl)
 
-        response.redirect(loginUrl)
+        return Response(FOUND).header("Location", loginUrl)
     }
 
-    private fun callbackSteam(request: Request, response: Response) {
-        val user = request.attribute<User>("user")
+    private fun callbackSteam(request: Request): Response {
+        val user = userLens(request)
 
         val params = mapOf(
-            "openid.return_to" to request.param("openid.return_to"),
-            "openid.identity" to request.param("openid.identity"),
-            "openid.op_endpoint" to request.param("openid.op_endpoint"),
-            "openid.assoc_handle" to request.param("openid.assoc_handle"),
-            "openid.mode" to request.param("openid.mode"),
-            "openid.signed" to request.param("openid.signed"),
-            "openid.sig" to request.param("openid.sig"),
-            "openid.claimed_id" to request.param("openid.claimed_id"),
-            "openid.response_nonce" to request.param("openid.response_nonce"),
-            "openid.ns" to request.param("openid.ns")
+            "openid.return_to" to request.query("openid.return_to")!!,
+            "openid.identity" to request.query("openid.identity")!!,
+            "openid.op_endpoint" to request.query("openid.op_endpoint")!!,
+            "openid.assoc_handle" to request.query("openid.assoc_handle")!!,
+            "openid.mode" to request.query("openid.mode")!!,
+            "openid.signed" to request.query("openid.signed")!!,
+            "openid.sig" to request.query("openid.sig")!!,
+            "openid.claimed_id" to request.query("openid.claimed_id")!!,
+            "openid.response_nonce" to request.query("openid.response_nonce")!!,
+            "openid.ns" to request.query("openid.ns")!!
         )
 
-        val player = steamOpenId.verifyResponse(request.url(), params) ?: throw halt(401)
+        val player = steamOpenId.verifyResponse(request.uri.toString(), params)
+            ?: return Response(UNAUTHORIZED)
 
         val sessionToken = authManager.assignSessionToken(user, player)
-        response.redirect("$frontendHost/auth/callback?session=$sessionToken")
+            ?: return Response(FORBIDDEN).body("User is already linked to another account")
+
+        return Response(FOUND).header("Location", "$frontendHost/auth/callback?session=$sessionToken")
     }
 
-    private fun Request.param(param: String) = if (decodeQueryParams) {
-        URLDecoder.decode(queryParams(param), Charsets.UTF_8)
-    } else {
-        queryParams(param)
-    }
+//    private fun Request.param(param: String) = if (decodeQueryParams) {
+//        URLDecoder.decode(queryParams(param), Charsets.UTF_8)
+//    } else {
+//        queryParams(param)
+//    }
 }

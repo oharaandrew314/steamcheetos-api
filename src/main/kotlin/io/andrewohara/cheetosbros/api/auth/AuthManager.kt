@@ -2,16 +2,16 @@ package io.andrewohara.cheetosbros.api.auth
 
 import io.andrewohara.cheetosbros.api.users.*
 import io.andrewohara.cheetosbros.sources.Player
-import spark.Filter
-import spark.Request
-import spark.Response
-import spark.Spark
 import java.lang.IllegalStateException
 import java.util.*
 
-class AuthManager(private val authorizationDao: AuthorizationDao, private val usersDao: UsersDao, private val socialLinkDao: SocialLinkDao): Filter {
+class AuthManager(
+    private val authorizationDao: AuthorizationDao,
+    private val usersDao: UsersDao,
+    private val socialLinkDao: SocialLinkDao
+    ) {
 
-    fun assignSessionToken(loggedInUser: User?, player: Player): String {
+    fun assignSessionToken(loggedInUser: User?, player: Player): String? {
         val linkedUser = lookup(player)
 
         val effectiveUser = when {
@@ -25,7 +25,7 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
                 linkedUser
             }
             linkedUser != null && loggedInUser != null -> {
-                if (linkedUser.id != loggedInUser.id) throw Spark.halt(400, "User is already linked to another account")
+                if (linkedUser.id != loggedInUser.id) return null
                 loggedInUser
             }
             else -> throw IllegalStateException()
@@ -56,12 +56,8 @@ class AuthManager(private val authorizationDao: AuthorizationDao, private val us
         return usersDao[userId]
     }
 
-    override fun handle(request: Request, response: Response) {
-        val token = request.headers("Authorization")?.replace("Bearer ", "") ?: return
-
-        val userId = authorizationDao.resolveUserId(token) ?: return
-        val user = usersDao[userId] ?: return
-
-        request.attribute("user", user)
+    fun exchange(token: String): User? {
+        val userId = authorizationDao.resolveUserId(token) ?: return null
+        return usersDao[userId]
     }
 }

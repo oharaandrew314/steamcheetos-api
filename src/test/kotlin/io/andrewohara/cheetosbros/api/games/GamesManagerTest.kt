@@ -67,7 +67,7 @@ class GamesManagerTest {
 
     @Test
     fun `list achievements for missing game`() {
-        assertThat(testObj.listAchievements(user, Platform.Steam, "missingGame")).isNull()
+        assertThat(testObj.listAchievements(user, Uid(Platform.Steam, "missingGame"))).isNull()
     }
 
     @Test
@@ -76,7 +76,7 @@ class GamesManagerTest {
         val progress1 = driver.saveProgress(xboxPLayer, me3, me3Achievements[0], Instant.ofEpochSecond(9001))
         val progress2 = driver.saveProgress(xboxPLayer, me3, me3Achievements[1], Instant.ofEpochSecond(50000))
 
-        assertThat(testObj.listAchievements(user, me3.uid.platform, me3.uid.id)).containsExactlyInAnyOrder(
+        assertThat(testObj.listAchievements(user, me3.uid)).containsExactlyInAnyOrder(
             progress1,
             progress2,
             AchievementDetails.create(me3Achievements[2], null)

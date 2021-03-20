@@ -32,9 +32,9 @@ class GamesManager(
         return OwnedGameDetails(game, ownedGame)
     }
 
-    fun listAchievements(user: User, platform: Platform, gameId: String): Collection<AchievementDetails>? {
-        val game = gamesDao[Uid(platform, gameId)] ?: return null
-        val player = user.players[platform] ?: return null
+    fun listAchievements(user: User, gameUid: Uid): Collection<AchievementDetails>? {
+        val game = gamesDao[gameUid] ?: return null
+        val player = user.players[gameUid.platform] ?: return null
 
         val achievements = achievementsDao[game.uid]
         val progress = achievementStatusDao[player.uid, game.uid]

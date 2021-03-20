@@ -29,7 +29,7 @@ class SyncLambdaHandler: RequestHandler<DynamodbEvent, Unit> {
 
         val steamApiKey = ssm.getParameter(request).parameter.value
 
-        ServiceBuilder.fromEnv(steamApiKey).jobService
+        ServiceBuilder.fromProps(System.getenv() + mapOf("STEAM_API_KEY" to steamApiKey)).jobService
     }
 
     override fun handleRequest(input: DynamodbEvent, context: Context) {
