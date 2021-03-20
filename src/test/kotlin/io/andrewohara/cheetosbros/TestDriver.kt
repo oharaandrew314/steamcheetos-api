@@ -65,7 +65,8 @@ object TestDriver: ExternalResource() {
         progressDao = achievementStatusDao,
         usersDao = usersDao,
         socialLinkDao = socialLinkDao,
-        frontendHost = "http://localhost:3000",
+        frontendHost = "fake:/ui",
+        serverHost = "fake://server",
         steamSource = steamSource,
         sourceFactory = SourceFactoryImpl(steamSource)
     )

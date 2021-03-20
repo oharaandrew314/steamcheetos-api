@@ -9,6 +9,8 @@ Parameters:
     Type: String
   FrontendHost:
     Type: String
+  ServerHost:
+    Type: String
 
 Globals:
   Function:
@@ -27,6 +29,7 @@ Globals:
         FRONTEND_HOST: !Ref FrontendHost
         PEM_ISSUER: !Ref AWS::StackName
         JOBS_TABLE: !Ref Jobs
+        SERVER_HOST: !Ref ServerHost
 
 Resources:
   Api:

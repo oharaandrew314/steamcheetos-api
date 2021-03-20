@@ -15,10 +15,7 @@ import io.andrewohara.cheetosbros.sources.steam.SteamSource
 import org.http4k.core.Method
 import org.http4k.core.RequestContexts
 import org.http4k.core.then
-import org.http4k.filter.CorsPolicy
-import org.http4k.filter.Only
-import org.http4k.filter.OriginPolicy
-import org.http4k.filter.ServerFilters
+import org.http4k.filter.*
 import org.http4k.lens.RequestContextKey
 import org.http4k.routing.RoutingHttpHandler
 import org.http4k.routing.routes
@@ -35,7 +32,8 @@ class ServiceBuilder(
     private val socialLinkDao: SocialLinkDao,
     steamSource: Source,
     sourceFactory: SourceFactory,
-    private val frontendHost: String
+    private val frontendHost: String,
+    private val serverHost: String
 ) {
     companion object {
         fun fromProps(props: Map<String, String>): ServiceBuilder {
@@ -53,6 +51,7 @@ class ServiceBuilder(
                 sourceFactory = SourceFactoryImpl(steamSource),
                 steamSource = steamSource,
                 frontendHost = props.getValue("FRONTEND_HOST"),
+                serverHost = props.getValue("SERVER_HOST"),
                 jobsDao = JobsDao(dynamo, props.getValue("JOBS_TABLE"))
             )
         }
@@ -87,7 +86,7 @@ class ServiceBuilder(
 
         val routes = routes(
             BaseApiV1.getRoutes(),
-            AuthApiV1(authManager, steamOpenId, frontendHost, authLens).getRoutes(),
+            AuthApiV1(authManager, steamOpenId, frontendHost, serverHost, authLens).getRoutes(),
             GamesApiV1(gamesManager, jobService, authLens, Instant::now).getRoutes()
         )
 
@@ -99,6 +98,7 @@ class ServiceBuilder(
         )
 
         return ServerFilters.InitialiseRequestContext(contexts)
+            .then(DebuggingFilters.PrintRequestAndResponse())
             .then(ServerFilters.Cors(corsPolicy))
             .then(AuthFilter(authLens, authManager::exchange))
             .then(routes)

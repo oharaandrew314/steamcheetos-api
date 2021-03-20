@@ -18,6 +18,7 @@ class AuthApiV1(
     private val authManager: AuthManager,
     private val steamOpenId: SteamOpenID,
     private val frontendHost: String,
+    private val serverHost: String,
     private val userLens: RequestContextLens<User?>,
 //    private val decodeQueryParams: Boolean
     ) {
@@ -28,8 +29,7 @@ class AuthApiV1(
     )
 
     private fun loginSteam(request: Request): Response {
-
-        val steamRedirectUrl = URIBuilder(request.uri.toString()).apply {
+        val steamRedirectUrl = URIBuilder(serverHost).apply {
             path = "/v1/auth/steam/callback"
         }.build().toString()
 
@@ -54,7 +54,12 @@ class AuthApiV1(
             "openid.ns" to request.query("openid.ns")!!
         )
 
-        val player = steamOpenId.verifyResponse(request.uri.toString(), params)
+        val receivingUrl = URIBuilder(serverHost).apply {
+            path = request.uri.path
+            setCustomQuery(request.uri.query)
+        }.build()
+
+        val player = steamOpenId.verifyResponse(receivingUrl.toString(), params)
             ?: return Response(UNAUTHORIZED)
 
         val sessionToken = authManager.assignSessionToken(user, player)

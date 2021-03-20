@@ -8,10 +8,6 @@ import org.http4k.routing.routes
 import org.http4k.core.Method.GET
 
 object BaseApiV1 {
-//    init {
-//        options("/*") { _, _ -> "OK" }  // cors
-//        get("/health") { _, _ -> "OK" }  //health
-//    }
 
     fun getRoutes() = routes(
         "/health" bind GET to ::health
