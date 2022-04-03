@@ -8,7 +8,7 @@ object Examples {
     val game = GameDtoV1(
         id = "123",
         name = "example game",
-        displayImage = "http://example.com/image.jpg",
+        displayImage = Uri.of("http://example.com/image.jpg"),
         achievementsCurrent = 1,
         achievementsTotal = 10,
         lastUpdated = Instant.now()
@@ -21,7 +21,8 @@ object Examples {
         hidden = false,
         unlocked = true,
         unlockedOn = Instant.parse("2021-01-01T01:00:00Z"),
-        icons = listOf("http://fake.com/image1.jpg"),
+        iconLocked = Uri.of("http://cheetos.com/locked.png"),
+        iconUnlocked = Uri.of("http://cheetos.com/unlocked.png"),
         score = 300
     )
 

@@ -80,7 +80,7 @@ class SteamClient(apiKey: String, backend: HttpHandler) {
                 GameData(
                     id = data.steam_appid.toString(),
                     name = data.name,
-                    displayImage = data.header_image
+                    displayImage = Uri.of(data.header_image)
                 )
             }
     }

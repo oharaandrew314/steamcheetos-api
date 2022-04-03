@@ -80,11 +80,11 @@ object ServiceBuilder {
         val security = BearerAuthSecurity(authLens, authService::authorize)
 
         val apiV1 = ContractUi(
-            pageTitle = "SteamCheetosBros API",
+            pageTitle = "SteamCheetos API",
             contract = contract {
                 renderer = OpenApi3(
                     ApiInfo(
-                        title = "SteamCheetosBros API",
+                        title = "SteamCheetos API",
                         version = "v1.0"
                     )
                 )

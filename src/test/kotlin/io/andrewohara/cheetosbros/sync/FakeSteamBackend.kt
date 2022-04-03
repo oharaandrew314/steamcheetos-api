@@ -62,7 +62,7 @@ class FakeSteamBackend: HttpHandler {
                         steam_appid = game.id.toInt(),
                         name = game.name,
                         type = "game",
-                        header_image = game.displayImage ?: "no image"
+                        header_image = game.displayImage?.toString() ?: "http://missing"
                     )
                 )
             }

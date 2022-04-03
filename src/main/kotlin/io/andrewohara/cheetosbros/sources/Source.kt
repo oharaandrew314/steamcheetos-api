@@ -13,7 +13,7 @@ data class UserData(
 data class GameData(
     val id: String,
     val name: String,
-    val displayImage: String?
+    val displayImage: Uri?
 )
 
 data class AchievementStatusData(

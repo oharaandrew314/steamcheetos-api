@@ -11,7 +11,7 @@ data class GameDtoV1(
     val name: String,
     val achievementsTotal: Int,
     val achievementsCurrent: Int,
-    val displayImage: String?,
+    val displayImage: Uri?,
     val lastUpdated: Instant
 )
 
@@ -20,7 +20,8 @@ data class AchievementDtoV1(
     val name: String,
     val description: String?,
     val hidden: Boolean,
-    val icons: List<String>,
+    val iconLocked: Uri?,
+    val iconUnlocked: Uri?,
     val score: Int?,
 
     val unlockedOn: Instant?,
@@ -42,7 +43,8 @@ fun Achievement.toDtoV1() = AchievementDtoV1(
     description = description,
     hidden = hidden,
     score = score,
-    icons = listOfNotNull(iconLocked, iconUnlocked).map { it.toString() },
+    iconLocked = iconLocked,
+    iconUnlocked = iconUnlocked,
     unlocked = unlockedOn != null,
     unlockedOn = unlockedOn
 )

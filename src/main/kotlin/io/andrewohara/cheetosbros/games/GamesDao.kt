@@ -1,7 +1,9 @@
 package io.andrewohara.cheetosbros.games
 
+import io.andrewohara.dynamokt.DynamoKtConverted
 import io.andrewohara.dynamokt.DynamoKtPartitionKey
 import io.andrewohara.dynamokt.DynamoKtSortKey
+import org.http4k.core.Uri
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable
 import software.amazon.awssdk.enhanced.dynamodb.Key
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
@@ -38,9 +40,10 @@ data class Game(
     @DynamoKtSortKey
     val id: String,
 
-    val name: String,
-    val displayImage: String?,
+    @DynamoKtConverted(UriConverter::class)
+    val displayImage: Uri?,
 
+    val name: String,
     val achievementsTotal: Int,
     val achievementsUnlocked: Int,
     val lastUpdated: Instant
