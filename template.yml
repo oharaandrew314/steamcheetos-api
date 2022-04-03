@@ -1,33 +1,27 @@
 Transform: AWS::Serverless-2016-10-31
 
 Parameters:
-  PrivatePemSsmName:
-    Type: String
-  PublicPemSsmName:
-    Type: String
-  SteamApiKeySsmName:
-    Type: String
+  SteamApiKey:
+    Type: AWS::SSM::Parameter::Value<String>
   FrontendHost:
     Type: String
   ServerHost:
     Type: String
+  KeyAdminUsername:
+    Type: String
+    Description: IAM name of user that will admin the key
 
 Globals:
   Function:
     Runtime: java11
+    MemorySize: 2048
     Environment:
       Variables:
+        AUTH_KEY_ID: !Ref EncryptionKey
         GAMES_TABLE: !Ref Games
         ACHIEVEMENTS_TABLE: !Ref Achievements
-        ACHIEVEMENT_STATUS_TABLE: !Ref AchievementStatus
-        USERS_TABLE: !Ref Users
-        SOCIAL_LINK_TABLE: !Ref SocialLinks
-        LIBRARY_TABLE: !Ref GameLibrary
-        STEAM_API_KEY_NAME: !Ref SteamApiKeySsmName
-        PRIVATE_PEM_NAME: !Ref PrivatePemSsmName
-        PUBLIC_PEM_NAME: !Ref PublicPemSsmName
+        STEAM_API_KEY: !Ref SteamApiKey
         FRONTEND_HOST: !Ref FrontendHost
-        PEM_ISSUER: !Ref AWS::StackName
         JOBS_TABLE: !Ref Jobs
         SERVER_HOST: !Ref ServerHost
 
@@ -43,72 +37,18 @@ Resources:
         ExposeHeaders: [ '*' ]
       DisableExecuteApiEndpoint: true
 
-  Role:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-                - lambda.amazonaws.com
-            Action: [ "sts:AssumeRole"]
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        - PolicyName: dynamodb-cameras-table-crud
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Sid: tablesCrud
-                Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:DeleteItem
-                  - dynamodb:PutItem
-                  - dynamodb:Scan
-                  - dynamodb:Query
-                  - dynamodb:UpdateItem
-                  - dynamodb:BatchWriteItem
-                  - dynamodb:BatchGetItem
-                  - dynamodb:DescribeTable
-                  - dynamodb:ConditionCheckItem
-                Resource:
-                  - !GetAtt Users.Arn
-                  - !GetAtt Games.Arn
-                  - !GetAtt Achievements.Arn
-                  - !GetAtt GameLibrary.Arn
-                  - !GetAtt AchievementStatus.Arn
-                  - !GetAtt SocialLinks.Arn
-                  - !GetAtt Jobs.Arn
-              - Sid: tableStream
-                Effect: Allow
-                Action:
-                  - dynamodb:DescribeStream
-                  - dynamodb:GetRecords
-                  - dynamodb:GetShardIterator
-                  - dynamodb:ListShards
-                  - dynamodb:ListStreams
-                Resource: !GetAtt Jobs.StreamArn
-              - Sid: ssm
-                Effect: Allow
-                Action:
-                  - ssm:GetParameters
-                  - ssm:GetParameter
-                  - ssm:GetParametersByPath
-                Resource:
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PrivatePemSsmName}
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${PublicPemSsmName}
-                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${SteamApiKeySsmName}
-
   SyncWorker:
     Type: 'AWS::Serverless::Function'
     Properties:
       Timeout: 60
-      Handler: io.andrewohara.cheetosbros.SyncLambdaHandler
-      MemorySize: 1024
-      Role: !GetAtt Role.Arn
+      Handler: io.andrewohara.cheetosbros.sync.SyncLambdaHandler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Games
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Achievements
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Jobs
       Events:
         WorkQueue:
           Type: DynamoDB
@@ -121,92 +61,76 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       Timeout: 10
-      Handler: io.andrewohara.cheetosbros.ApiLambdaHandler
-      MemorySize: 1024
-      Role: !GetAtt Role.Arn
+      Handler: io.andrewohara.cheetosbros.api.ApiLambdaHandler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref Games
+        - DynamoDBReadPolicy:
+            TableName: !Ref Achievements
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Jobs
+        - KMSEncryptPolicy:
+            KeyId: !Ref EncryptionKey
+        - KMSDecryptPolicy:
+            KeyId: !Ref EncryptionKey
       Events:
         HttpApiEvent:
           Type: HttpApi
           Properties:
             ApiId: !Ref Api
 
-  Users:
-    Type: AWS::DynamoDB::Table
+  EncryptionKey:
+    Type: AWS::KMS::Key
     Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:root
+            Action: kms:*
+            Resource: '*'
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS: !Sub arn:aws:iam::${AWS::AccountId}:user/${KeyAdminUsername}
+            Action:
+              - kms:*
+            Resource: '*'
+      KeySpec: RSA_2048
+      KeyUsage: ENCRYPT_DECRYPT
 
   Games:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: uuid
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: id
           AttributeType: S
       KeySchema:
-        - AttributeName: uuid
+        - AttributeName: userId
           KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
 
   Achievements:
     Type: AWS::DynamoDB::Table
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: gameUuid
+        - AttributeName: libraryId
           AttributeType: S
-        - AttributeName: achievementId
+        - AttributeName: id
           AttributeType: S
       KeySchema:
-        - AttributeName: gameUuid
+        - AttributeName: libraryId
           KeyType: HASH
-        - AttributeName: achievementId
+        - AttributeName: id
           KeyType: RANGE
-
-  GameLibrary:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: playerUuid
-          AttributeType: S
-        - AttributeName: gameId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: playerUuid
-          KeyType: HASH
-        - AttributeName: gameId
-          KeyType: RANGE
-
-  AchievementStatus:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: playerAndGameId
-          AttributeType: S
-        - AttributeName: achievementId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: playerAndGameId
-          KeyType: HASH
-        - AttributeName: achievementId
-          KeyType: RANGE
-
-  SocialLinks:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: playerUuid
-          AttributeType: S
-      KeySchema:
-        - AttributeName: playerUuid
-          KeyType: HASH
 
   Jobs:
     Type: AWS::DynamoDB::Table
@@ -215,12 +139,15 @@ Resources:
       AttributeDefinitions:
         - AttributeName: userId
           AttributeType: S
-        - AttributeName: jobId
+        - AttributeName: gameId
           AttributeType: S
       KeySchema:
         - AttributeName: userId
           KeyType: HASH
-        - AttributeName: jobId
+        - AttributeName: gameId
           KeyType: RANGE
       StreamSpecification:
         StreamViewType: NEW_IMAGE
+      TimeToLiveSpecification:
+        AttributeName: expires
+        Enabled: true

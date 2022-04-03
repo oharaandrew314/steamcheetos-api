@@ -1,50 +1,44 @@
 package io.andrewohara.cheetosbros.lib
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapperConfig
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTableMapper
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTypeConverter
-import io.andrewohara.cheetosbros.api.games.Uid
-import io.andrewohara.cheetosbros.sources.Platform
+import software.amazon.awssdk.enhanced.dynamodb.AttributeConverter
+import software.amazon.awssdk.enhanced.dynamodb.AttributeValueType
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable
+import software.amazon.awssdk.enhanced.dynamodb.EnhancedType
+import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch
+import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 import java.time.Instant
-import java.util.*
 
-object DynamoUtils {
+object DynamoLimits {
+    const val batchSize = 25
+}
 
-    inline fun <reified T, H, S> mapper(tableName: String, client: AmazonDynamoDB): DynamoDBTableMapper<T, H, S> {
-        val config = DynamoDBMapperConfig.Builder()
-                .withTableNameOverride(DynamoDBMapperConfig.TableNameOverride.withTableNameReplacement(tableName))
-                .build()
+class InstantAsLongConverter: AttributeConverter<Instant> {
 
-        return DynamoDBMapper(client, config).newTableMapper(T::class.java)
+    override fun transformFrom(input: Instant): AttributeValue = AttributeValue.fromN(input.epochSecond.toString())
+
+    override fun transformTo(input: AttributeValue): Instant = Instant.ofEpochSecond(input.n().toLong())
+
+    override fun type(): EnhancedType<Instant> = EnhancedType.of(Instant::class.java)
+
+    override fun attributeValueType(): AttributeValueType = AttributeValueType.N
+}
+
+inline fun <reified T> DynamoDbTable<T>.batchPut(client: DynamoDbEnhancedClient, items: Collection<T>) {
+    if (items.isEmpty()) return
+
+    val batches = items.chunked(DynamoLimits.batchSize).map { chunk ->
+        WriteBatch.builder(T::class.java).apply {
+            mappedTableResource(this@batchPut)
+            for (item in chunk) {
+                addPutItem(item)
+            }
+        }.build()
     }
-}
 
-class EpochInstantConverter: DynamoDBTypeConverter<Long, Instant> {
-    override fun convert(instance: Instant)= instance.epochSecond
-    override fun unconvert(serialized: Long): Instant = Instant.ofEpochSecond(serialized)
-}
-
-class IsoInstantConverter: DynamoDBTypeConverter<String, Instant> {
-    override fun convert(instance: Instant)= instance.toString()
-    override fun unconvert(serialized: String): Instant = Instant.parse(serialized)
-}
-
-class PlatformConverter: DynamoDBTypeConverter<String, Platform> {
-    override fun convert(instance: Platform) = instance.toString()
-    override fun unconvert(serialized: String): Platform = Platform.valueOf(serialized)
-}
-
-class UidConverter: DynamoDBTypeConverter<String, Uid> {
-    override fun convert(uid: Uid) = uid.toString()
-    override fun unconvert(serialized: String): Uid {
-        val (platform, id) = serialized.split("-", limit = 2)
-        return Uid(Platform.valueOf(platform), id)
+    for (batch in batches) {
+        client.batchWriteItem {
+            it.addWriteBatch(batch)
+        }
     }
-}
-
-class UUIDConverter: DynamoDBTypeConverter<String, UUID> {
-    override fun convert(uuid: UUID) = uuid.toString()
-    override fun unconvert(serialized: String): UUID = UUID.fromString(serialized)
 }

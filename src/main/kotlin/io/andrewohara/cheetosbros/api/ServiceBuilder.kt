@@ -1,106 +1,102 @@
 package io.andrewohara.cheetosbros.api
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder
 import io.andrewohara.cheetosbros.api.auth.*
-import io.andrewohara.cheetosbros.api.games.*
-import io.andrewohara.cheetosbros.api.users.SocialLinkDao
-import io.andrewohara.cheetosbros.api.users.User
-import io.andrewohara.cheetosbros.api.users.UsersDao
-import io.andrewohara.cheetosbros.api.v1.AuthApiV1
-import io.andrewohara.cheetosbros.api.v1.BaseApiV1
-import io.andrewohara.cheetosbros.api.v1.GamesApiV1
-import io.andrewohara.cheetosbros.lib.PemUtils
-import io.andrewohara.cheetosbros.sources.*
-import io.andrewohara.cheetosbros.sources.steam.SteamSource
-import org.http4k.core.Method
-import org.http4k.core.RequestContexts
-import org.http4k.core.then
+import io.andrewohara.cheetosbros.api.v1.*
+import io.andrewohara.cheetosbros.games.*
+import io.andrewohara.cheetosbros.jobs.Job
+import io.andrewohara.cheetosbros.jobs.JobService
+import io.andrewohara.cheetosbros.jobs.JobsDao
+import io.andrewohara.cheetosbros.sources.steam.SteamClient
+import io.andrewohara.cheetosbros.sync.SyncService
+import io.andrewohara.dynamokt.DataClassTableSchema
+import io.andrewohara.utils.http4k.ContractUi
+import org.http4k.contract.contract
+import org.http4k.contract.openapi.ApiInfo
+import org.http4k.contract.openapi.v3.OpenApi3
+import org.http4k.contract.security.BearerAuthSecurity
+import org.http4k.core.*
 import org.http4k.filter.*
 import org.http4k.lens.RequestContextKey
-import org.http4k.routing.RoutingHttpHandler
-import org.http4k.routing.routes
+import org.http4k.routing.*
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
+import java.time.Clock
 import java.time.Duration
-import java.time.Instant
 
-class ServiceBuilder(
-    gamesDao: GamesDao,
-    libraryDao: GameLibraryDao,
-    achievementsDao: AchievementsDao,
-    progressDao: AchievementStatusDao,
-    private val usersDao: UsersDao,
-    jobsDao: JobsDao,
-    private val socialLinkDao: SocialLinkDao,
-    steamSource: Source,
-    sourceFactory: SourceFactory,
-    private val frontendHost: String,
-    private val serverHost: String
-) {
-    companion object {
-        fun fromProps(props: Map<String, String>): ServiceBuilder {
-            val dynamo = AmazonDynamoDBClientBuilder.defaultClient()
-
-            val steamSource = SteamSource(props.getValue("STEAM_API_KEY"))
-
-            return ServiceBuilder(
-                gamesDao = GamesDao(props.getValue("GAMES_TABLE"), dynamo),
-                achievementsDao = AchievementsDao(props.getValue("ACHIEVEMENTS_TABLE"), dynamo),
-                progressDao = AchievementStatusDao(props.getValue("ACHIEVEMENT_STATUS_TABLE"), dynamo),
-                usersDao = UsersDao(props.getValue("USERS_TABLE"), dynamo),
-                socialLinkDao = SocialLinkDao(dynamo, props.getValue("SOCIAL_LINK_TABLE")),
-                libraryDao = GameLibraryDao(props.getValue("LIBRARY_TABLE"), dynamo),
-                sourceFactory = SourceFactoryImpl(steamSource),
-                steamSource = steamSource,
-                frontendHost = props.getValue("FRONTEND_HOST"),
-                serverHost = props.getValue("SERVER_HOST"),
-                jobsDao = JobsDao(dynamo, props.getValue("JOBS_TABLE"))
-            )
-        }
+object ServiceBuilder {
+    fun syncService(
+        steamBackend: HttpHandler,
+        steamApiKey: String,
+        gameService: GameService,
+        clock: Clock
+    ): SyncService {
+        return SyncService(
+            steam = SteamClient(steamApiKey, steamBackend),
+            gameService = gameService,
+            clock = clock
+        )
     }
 
-    val gamesManager = GamesManager(gamesDao, libraryDao, achievementsDao, progressDao)
-
-    val sourceManager = SourceManager(
-        sourceFactory = sourceFactory,
-        achievementsDao = achievementsDao,
-        achievementStatusDao = progressDao,
-        gamesDao = gamesDao,
-        gameLibraryDao = libraryDao,
-        gameCacheDuration = Duration.ofDays(7),
-        usersDao = usersDao
+    fun jobService(
+        dynamo: DynamoDbEnhancedClient,
+        jobsTableName: String,
+        clock: Clock,
+        jobRetention: Duration = Duration.ofHours(1),
+        syncService: SyncService
+    ) = JobService(
+        jobsDao = JobsDao(dynamo, dynamo.table(jobsTableName, DataClassTableSchema(Job::class))),
+        clock = clock,
+        retention = jobRetention,
+        syncService = syncService
     )
 
-    fun createJwtAuth(issuer: String, privateKey: String, publicKey: String) = JwtAuthorizationDao(
-        issuer = issuer,
-        privateKey = PemUtils.parsePEMFile(privateKey)!!,
-        publicKey = PemUtils.parsePEMFile(publicKey)!!
+    fun gameService(
+        dynamo: DynamoDbEnhancedClient,
+        gamesTableName: String,
+        achievementsTableName: String,
+    ) = GameService(
+        gamesDao = GamesDao(dynamo.table(gamesTableName, DataClassTableSchema(Game::class))),
+        achievementsDao = AchievementsDao(dynamo, dynamo.table(achievementsTableName, DataClassTableSchema(Achievement::class)))
     )
 
-    val jobService = JobService(sourceManager, jobsDao)
-    private val steamOpenId = SteamOpenID(steamApi = steamSource)
+    fun authService(
+        authDao: AuthorizationDao,
+        serverHost: Uri
+    ) = AuthService(
+        authDao = authDao,
+        serverHost = serverHost,
+        steamOpenId = SteamOpenID()
+    )
 
-    fun createHttp(authDao: AuthorizationDao): RoutingHttpHandler {
+    fun api(
+        gameService: GameService,
+        jobService: JobService,
+        authService: AuthService,
+        syncService: SyncService,
+        corsPolicy: CorsPolicy
+    ): RoutingHttpHandler {
         val contexts = RequestContexts()
-        val authLens = RequestContextKey.optional<User>(contexts)
+        val authLens = RequestContextKey.required<String>(contexts, "auth")
 
-        val authManager = AuthManager(authDao, usersDao, socialLinkDao)
+        val security = BearerAuthSecurity(authLens, authService::authorize)
 
-        val routes = routes(
-            BaseApiV1.getRoutes(),
-            AuthApiV1(authManager, steamOpenId, frontendHost, serverHost, authLens).getRoutes(),
-            GamesApiV1(gamesManager, jobService, authLens, Instant::now).getRoutes()
-        )
-
-        val corsPolicy = CorsPolicy(
-            OriginPolicy.Only(frontendHost),
-            headers = listOf("Authorization"),
-            methods = listOf(Method.GET, Method.POST),
-            credentials = true
+        val apiV1 = ContractUi(
+            pageTitle = "SteamCheetosBros API",
+            contract = contract {
+                renderer = OpenApi3(
+                    ApiInfo(
+                        title = "SteamCheetosBros API",
+                        version = "v1.0"
+                    )
+                )
+                descriptionPath =  "/swagger.json"
+                routes += ApiV1(gameService, jobService, authService, syncService, authLens, security).routes()
+            },
+            descriptionPath =  "/swagger.json",
+            displayOperationId = true
         )
 
         return ServerFilters.InitialiseRequestContext(contexts)
-            .then(DebuggingFilters.PrintRequestAndResponse())
             .then(ServerFilters.Cors(corsPolicy))
-            .then(AuthFilter(authLens, authManager::exchange))
-            .then(routes)
+            .then(apiV1)
     }
 }

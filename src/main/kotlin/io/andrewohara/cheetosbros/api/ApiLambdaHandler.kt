@@ -2,31 +2,25 @@ package io.andrewohara.cheetosbros.api
 
 import io.andrewohara.cheetosbros.api.auth.KmsAuthorizationDao
 import org.http4k.client.JavaHttpClient
+import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Uri
-import org.http4k.core.then
-import org.http4k.filter.*
-import org.http4k.server.SunHttp
-import org.http4k.server.asServer
-import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
+import org.http4k.filter.CorsPolicy
+import org.http4k.filter.Only
+import org.http4k.filter.OriginPolicy
+import org.http4k.serverless.ApiGatewayV2LambdaFunction
+import org.http4k.serverless.AppLoader
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
 import software.amazon.awssdk.services.kms.KmsClient
 import java.time.Clock
-import kotlin.io.path.ExperimentalPathApi
 
-object DevelopmentApiServer {
+object ApiLambdaLoader: AppLoader {
 
-    @ExperimentalPathApi
-    @JvmStatic
-    fun main(args: Array<String>) {
-        val env = System.getenv()
-
+    override fun invoke(env: Map<String, String>): HttpHandler {
         val dynamo = DynamoDbEnhancedClient.create()
-        val kms = KmsClient.builder()
-            .credentialsProvider(ProfileCredentialsProvider.create("default"))
-            .build()
+        val kms = KmsClient.create()
 
-        val serverHost = Uri.of(env.getValue("SERVER_HOST"))
+        val frontendHost = Uri.of(env.getValue("FRONTEND_HOST"))
 
         val gameService = ServiceBuilder.gameService(
             dynamo = dynamo,
@@ -35,7 +29,7 @@ object DevelopmentApiServer {
         )
 
         val syncService = ServiceBuilder.syncService(
-            steamBackend = DebuggingFilters.PrintResponse().then(JavaHttpClient()),
+            steamBackend = JavaHttpClient(),
             steamApiKey = env.getValue("STEAM_API_KEY"),
             clock = Clock.systemUTC(),
             gameService = gameService
@@ -48,10 +42,10 @@ object DevelopmentApiServer {
             syncService = syncService
         )
 
-        val api = ServiceBuilder.api(
+        return ServiceBuilder.api(
             gameService = gameService,
             authService = ServiceBuilder.authService(
-                serverHost = serverHost,
+                serverHost = Uri.of(env.getValue("SERVER_HOST")),
                 authDao = KmsAuthorizationDao(
                     kms = kms,
                     keyId = env.getValue("AUTH_KEY_ID")
@@ -59,13 +53,14 @@ object DevelopmentApiServer {
             ),
             jobService = jobService,
             syncService = syncService,
-            corsPolicy = CorsPolicy(OriginPolicy.AllowAll(), listOf("Authorization"), Method.values().toList(), false)
+            corsPolicy = CorsPolicy(
+                OriginPolicy.Only(frontendHost.toString()),
+                headers = listOf("Authorization"),
+                methods = listOf(Method.GET, Method.POST),
+                credentials = true
+            )
         )
-
-        DebuggingFilters.PrintRequestAndResponse()
-            .then(api)
-            .asServer(SunHttp(serverHost.port!!))
-            .start()
-            .block()
     }
 }
+
+class ApiLambdaHandler: ApiGatewayV2LambdaFunction(ApiLambdaLoader)

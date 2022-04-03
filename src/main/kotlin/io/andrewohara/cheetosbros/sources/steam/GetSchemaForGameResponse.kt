@@ -1,31 +1,31 @@
 package io.andrewohara.cheetosbros.sources.steam
 
 data class GetSchemaForGameResponse(
-        val game: GetSchemaForGameResponseContent
+    val game: Content
 ) {
-    data class GetSchemaForGameResponseContent(
-            val gameName: String?,
-            val gameVersion: String?,
-            val availableGameStats: GetSchemaForGameResponseStats?
+    data class Content(
+        val gameName: String?,
+        val gameVersion: String?,
+        val availableGameStats: Data?
     ) {
-        data class GetSchemaForGameResponseStats(
-                val achievements: List<SteamAchievement>?,
-                val stats: List<SteamStat>?
+        data class Data(
+            val achievements: List<Achievement>?,
+            val stats: List<Stat>?
         ) {
-            data class SteamAchievement(
-                    val name: String,
-                    val defaultvalue: Long,
-                    val displayName: String,
-                    val hidden: Int,
-                    val description: String?,
-                    val icon: String,
-                    val icongray: String
+            data class Achievement(
+                val name: String,
+                val defaultvalue: Long,
+                val displayName: String,
+                val hidden: Int,
+                val description: String?,
+                val icon: String,
+                val icongray: String
             )
 
-            data class SteamStat(
-                    val name: String,
-                    val defaultvalue: Long?,
-                    val displayName: String?
+            data class Stat(
+                val name: String,
+                val defaultvalue: Long?,
+                val displayName: String?
             )
         }
     }

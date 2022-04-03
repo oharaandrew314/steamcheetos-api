@@ -1,46 +1,36 @@
 package io.andrewohara.cheetosbros.sources
 
-import io.andrewohara.cheetosbros.api.games.Uid
+import org.http4k.core.Uri
 import java.lang.Exception
 import java.time.Instant
 
-data class Player(
-    val uid: Uid,
+data class UserData(
+    val id: String,
     val username: String,
-    val avatar: String?,
-    var token: String?
+    val avatar: Uri?
 )
 
-enum class Platform { Steam, Xbox }
-
 data class GameData(
-    val uid: Uid,
+    val id: String,
     val name: String,
     val displayImage: String?
 )
 
-data class Achievement(
-    val id: String,
-    val name: String,
-    val description: String?,
-    val hidden: Boolean,
-    val icons: List<String>,
-    val score: Int?
-)
-
-data class AchievementStatus(
+data class AchievementStatusData(
     val achievementId: String,
     val unlockedOn: Instant?
 )
 
-interface Source {
-    val platform: Platform
+data class AchievementData(
+    val gameId: String,
+    val id: String,
 
-    fun getPlayer(playerId: String): Player?
-    fun getFriends(playerId: String): Collection<String>
-    fun library(playerId: String): Collection<GameData>
-    fun achievements(gameId: String): Collection<Achievement>
-    fun userAchievements(gameId: String, playerId: String): Collection<AchievementStatus>
-}
+    val name: String,
+    val description: String?,
+    val hidden: Boolean,
+    val iconLocked: Uri?,
+    val iconUnlocked: Uri?,
+    val score: Int?,
+)
 
 class SourceAccessDenied(message: String): Exception(message)
