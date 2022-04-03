@@ -3,8 +3,8 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
   SteamApiKey:
     Type: AWS::SSM::Parameter::Value<String>
-  FrontendHost:
-    Type: String
+  CorsOrigins:
+    Type: CommaDelimitedList
   ServerHost:
     Type: String
   KeyAdminUsername:
@@ -21,7 +21,7 @@ Globals:
         GAMES_TABLE: !Ref Games
         ACHIEVEMENTS_TABLE: !Ref Achievements
         STEAM_API_KEY: !Ref SteamApiKey
-        FRONTEND_HOST: !Ref FrontendHost
+        CORS_ORIGINS: !Join [ ',', !Ref CorsOrigins ]
         JOBS_TABLE: !Ref Jobs
         SERVER_HOST: !Ref ServerHost
 
@@ -33,7 +33,7 @@ Resources:
         AllowCredentials: true
         AllowHeaders: [ Authorization ]
         AllowMethods: [ GET, POST ]
-        AllowOrigins: [ !Ref FrontendHost ]
+        AllowOrigins: !Ref CorsOrigins
         ExposeHeaders: [ '*' ]
       DisableExecuteApiEndpoint: true
 

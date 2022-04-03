@@ -5,8 +5,8 @@ import org.http4k.client.JavaHttpClient
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Uri
+import org.http4k.filter.AnyOf
 import org.http4k.filter.CorsPolicy
-import org.http4k.filter.Only
 import org.http4k.filter.OriginPolicy
 import org.http4k.serverless.ApiGatewayV2LambdaFunction
 import org.http4k.serverless.AppLoader
@@ -20,7 +20,12 @@ object ApiLambdaLoader: AppLoader {
         val dynamo = DynamoDbEnhancedClient.create()
         val kms = KmsClient.create()
 
-        val frontendHost = Uri.of(env.getValue("FRONTEND_HOST"))
+        val corsPolicy = CorsPolicy(
+            OriginPolicy.AnyOf(env.getValue("CORS_ORIGINS").split(",")),
+            headers = listOf("Authorization"),
+            methods = listOf(Method.GET, Method.POST),
+            credentials = true
+        )
 
         val gameService = ServiceBuilder.gameService(
             dynamo = dynamo,
@@ -53,12 +58,7 @@ object ApiLambdaLoader: AppLoader {
             ),
             jobService = jobService,
             syncService = syncService,
-            corsPolicy = CorsPolicy(
-                OriginPolicy.Only(frontendHost.toString()),
-                headers = listOf("Authorization"),
-                methods = listOf(Method.GET, Method.POST),
-                credentials = true
-            )
+            corsPolicy = corsPolicy
         )
     }
 }
