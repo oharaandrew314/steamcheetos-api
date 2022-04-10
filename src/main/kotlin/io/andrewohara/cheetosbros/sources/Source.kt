@@ -13,7 +13,7 @@ data class UserData(
 data class GameData(
     val id: String,
     val name: String,
-    val displayImage: Uri?
+    val displayImage: Uri
 )
 
 data class AchievementStatusData(
@@ -28,9 +28,8 @@ data class AchievementData(
     val name: String,
     val description: String?,
     val hidden: Boolean,
-    val iconLocked: Uri?,
-    val iconUnlocked: Uri?,
-    val score: Int?,
+    val iconLocked: Uri,
+    val iconUnlocked: Uri
 )
 
 class SourceAccessDenied(message: String): Exception(message)

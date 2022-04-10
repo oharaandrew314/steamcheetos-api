@@ -9,10 +9,10 @@ import java.time.Instant
 data class GameDtoV1(
     val id: String,
     val name: String,
-    val achievementsTotal: Int,
-    val achievementsCurrent: Int,
-    val displayImage: Uri?,
-    val lastUpdated: Instant
+    val achievementsTotal: Int?,
+    val achievementsCurrent: Int?,
+    val displayImage: Uri,
+    val achievementsExpire: Instant,
 )
 
 data class AchievementDtoV1(
@@ -22,14 +22,9 @@ data class AchievementDtoV1(
     val hidden: Boolean,
     val iconLocked: Uri?,
     val iconUnlocked: Uri?,
-    val score: Int?,
 
     val unlockedOn: Instant?,
     val unlocked: Boolean
-)
-
-data class JobStatusDtoV1(
-    val count: Int
 )
 
 data class UserDtoV1(
@@ -42,20 +37,21 @@ fun Achievement.toDtoV1() = AchievementDtoV1(
     name = name,
     description = description,
     hidden = hidden,
-    score = score,
     iconLocked = iconLocked,
     iconUnlocked = iconUnlocked,
     unlocked = unlockedOn != null,
     unlockedOn = unlockedOn
 )
 
+fun Collection<Achievement>.toDtoV1s() = map { it.toDtoV1() }
+
 fun Game.toDtoV1() = GameDtoV1(
     id = id,
     name = name,
-    lastUpdated = lastUpdated,
     displayImage = displayImage,
     achievementsCurrent = achievementsUnlocked,
-    achievementsTotal = achievementsTotal
+    achievementsTotal = achievementsTotal,
+    achievementsExpire = progressExpires
 )
 
 fun UserData.toDtoV1() = UserDtoV1(

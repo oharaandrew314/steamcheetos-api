@@ -11,7 +11,7 @@ object Examples {
         displayImage = Uri.of("http://example.com/image.jpg"),
         achievementsCurrent = 1,
         achievementsTotal = 10,
-        lastUpdated = Instant.now()
+        achievementsExpire = Instant.EPOCH
     )
 
     val achievement = AchievementDtoV1(
@@ -22,12 +22,7 @@ object Examples {
         unlocked = true,
         unlockedOn = Instant.parse("2021-01-01T01:00:00Z"),
         iconLocked = Uri.of("http://cheetos.com/locked.png"),
-        iconUnlocked = Uri.of("http://cheetos.com/unlocked.png"),
-        score = 300
-    )
-
-    val jobStatus = JobStatusDtoV1(
-        count = 1337
+        iconUnlocked = Uri.of("http://cheetos.com/unlocked.png")
     )
 
     val user = UserDtoV1(

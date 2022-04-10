@@ -1,10 +1,9 @@
-package io.andrewohara.cheetosbros.sync
+package io.andrewohara.cheetosbros.sources.steam
 
 import io.andrewohara.cheetosbros.sources.AchievementData
 import io.andrewohara.cheetosbros.sources.AchievementStatusData
 import io.andrewohara.cheetosbros.sources.GameData
 import io.andrewohara.cheetosbros.sources.UserData
-import io.andrewohara.cheetosbros.sources.steam.*
 import org.http4k.core.*
 import org.http4k.routing.bind
 import org.http4k.routing.routes
@@ -23,6 +22,7 @@ class FakeSteamBackend: HttpHandler {
     private val userGames = mutableSetOf<Pair<SteamId, AppId>>()
     private val achievements = mutableSetOf<Pair<AppId, AchievementData>>()
     private val userAchievements = mutableSetOf<Triple<SteamId, AppId, AchievementStatusData>>()
+    private val recentlyPlayed = mutableSetOf<Pair<SteamId, AppId>>()
 
     private fun getOwnedGames(request: Request): Response {
         val steamId = SteamClient.Lenses.steamId(request)
@@ -33,8 +33,8 @@ class FakeSteamBackend: HttpHandler {
             .map { game ->
                 GetOwnedGamesResponse.Data.Game(
                     appid = game.id.toInt(),
-//                    img_logo_url = game.displayImage!!,
-//                    name = game.name
+                    img_logo_url = game.displayImage.toString(),
+                    name = game.name
                 )
             }
 
@@ -46,28 +46,6 @@ class FakeSteamBackend: HttpHandler {
         )
 
         return Response(Status.OK).with(SteamClient.Lenses.ownedGames of response)
-    }
-
-    private fun getGameData(request: Request): Response {
-        val appIds = SteamClient.Lenses.appIds(request)
-            .split(",")
-            .map { it.toLong() }
-
-        val results = appIds
-            .mapNotNull { games[it] }
-            .associate { game ->
-                game.id to StoreApiGameEntry(
-                    success = true,
-                    data = StoreApiGameEntry.Data(
-                        steam_appid = game.id.toInt(),
-                        name = game.name,
-                        type = "game",
-                        header_image = game.displayImage?.toString() ?: "http://missing"
-                    )
-                )
-            }
-
-        return Response(Status.OK).with(SteamClient.Lenses.storeGames of results)
     }
 
     private fun getSchemaForGame(request: Request): Response {
@@ -84,8 +62,8 @@ class FakeSteamBackend: HttpHandler {
                     description = achievement.description,
                     defaultvalue = 0,
                     hidden = if (achievement.hidden) 1 else 0,
-                    icon = achievement.iconUnlocked?.toString() ?: "icon",
-                    icongray = achievement.iconUnlocked?.toString() ?: "iconGray"
+                    icon = achievement.iconUnlocked.toString(),
+                    icongray = achievement.iconUnlocked.toString()
                 )
             }
 
@@ -168,6 +146,32 @@ class FakeSteamBackend: HttpHandler {
         return Response(Status.OK).with(SteamClient.Lenses.playerSummaries of response)
     }
 
+    private fun getRecentlyPlayed(request: Request): Response {
+        val steamId = SteamClient.Lenses.steamId(request)
+        val count = SteamClient.Lenses.count(request)
+
+        val results = recentlyPlayed
+            .filter { it.first == steamId }
+            .mapNotNull { games[it.second] }
+            .take(count?.takeIf { it != 0 } ?: Int.MAX_VALUE)
+            .map { game ->
+                GetRecentlyPlayedResponse.Data.Game(
+                    appid = game.id.toInt(),
+                    name = game.name,
+                    img_logo_url = game.displayImage.toString()
+                )
+            }
+
+        val response = GetRecentlyPlayedResponse(
+            response = GetRecentlyPlayedResponse.Data(
+                total_count = results.size,
+                games = results
+            )
+        )
+
+        return Response(Status.OK).with(SteamClient.Lenses.recentlyPlayed of response)
+    }
+
     fun createUser(displayName: String, avatar: String? = null): UserData {
         val id = nextId++.toString()
         val user = UserData(
@@ -180,35 +184,20 @@ class FakeSteamBackend: HttpHandler {
         return user
     }
 
-    fun createGame(name: String? = null): GameData {
-        val id = nextId++.toString()
-        val game = GameData(
-            id = id,
-            displayImage = null,
-            name = name ?: "game-$id",
-        )
-        games[game.id.toLong()] = game
-
-        return game
+    operator fun plusAssign(data: GameData) {
+        games[data.id.toLong()] = data
     }
 
-    fun createAchievement(gameData: GameData, name: String? = null, description: String? = null, hidden: Boolean = false, score: Int? = null): AchievementData {
-        val id = nextId++.toString()
-        val actualName = name ?: "${gameData.name}-achievement-$id"
+    operator fun plusAssign(data: AchievementData) {
+        achievements += data.gameId.toLong() to data
+    }
 
-        val achievement = AchievementData(
-            gameId = gameData.id,
-            id = id,
-            name = actualName,
-            description = description ?: "description for $actualName",
-            hidden = hidden,
-            iconLocked = null,
-            iconUnlocked = null,
-            score = score
-        )
-        achievements += achievement.gameId.toLong() to achievement
+    operator fun set(userId: String, game: GameData) {
+        userGames += userId.toLong() to game.id.toLong()
+    }
 
-        return achievement
+    fun recentlyPlayed(userId: String, game: GameData) {
+        recentlyPlayed += userId.toLong() to game.id.toLong()
     }
 
     fun unlockAchievement(userId: String, achievement: AchievementData, unlocked: Instant?): AchievementStatusData {
@@ -224,10 +213,10 @@ class FakeSteamBackend: HttpHandler {
 
     private val routes = routes(
         SteamClient.Paths.ownedGames bind Method.GET to ::getOwnedGames,
-        SteamClient.Paths.gameData bind Method.GET to ::getGameData,
         SteamClient.Paths.gameSchema bind Method.GET to ::getSchemaForGame,
         SteamClient.Paths.userAchievements bind Method.GET to ::userAchievements,
-        SteamClient.Paths.players bind Method.GET to ::getPlayers
+        SteamClient.Paths.players bind Method.GET to ::getPlayers,
+        SteamClient.Paths.recentlyPlayedGames bind Method.GET to ::getRecentlyPlayed,
     )
 
     override fun invoke(request: Request) = routes(request)

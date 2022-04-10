@@ -1,8 +1,11 @@
 package io.andrewohara.cheetosbros.api.v1
 
 import io.andrewohara.cheetosbros.TestDriver
-import io.andrewohara.cheetosbros.tnow
+import io.andrewohara.cheetosbros.me3AchievementData
+import io.andrewohara.cheetosbros.me3Data
 import io.kotest.matchers.be
+import io.kotest.matchers.collections.containExactly
+import io.kotest.matchers.collections.containExactlyInAnyOrder
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Status
@@ -27,30 +30,26 @@ class ApiV1Test {
 
     @Test
     fun `list games`() {
-        val dsp = driver.createGame(userId, "Dyson Sphere Program")
+        val created = driver.createGame(userId, me3Data, me3AchievementData, emptyList())
 
         val response = Request(Method.GET, "/v1/games")
             .asUser(userId)
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.gamesList, be(listOf(dsp.game.toDtoV1())))
+        response.shouldHaveBody(ApiV1.Lenses.gamesList, containExactly(created.game.toDtoV1()))
     }
 
     @Test
     fun `list achievements`() {
-        val btd6 = driver.createGame(
-            userId, "Bloons TD 6",
-            Triple("Superior Bloons Master", "Beat 5 maps in CHIMPS mode", tnow),
-            Triple("Triple Threat", "Beat 1 map in 3-person co-op mode", null)
-        )
+        val created = driver.createGame(userId, me3Data, me3AchievementData, emptyList())
 
-        val response = Request(Method.GET, "/v1/games/${btd6.game.id}/achievements")
+        val response = Request(Method.GET, "/v1/games/${created.game.id}/achievements")
             .asUser(userId)
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.achievementList, be(btd6.achievements.map { it.toDtoV1() }))
+        response.shouldHaveBody(ApiV1.Lenses.achievementList, containExactlyInAnyOrder(created.achievements.toDtoV1s()))
     }
 
     @Test

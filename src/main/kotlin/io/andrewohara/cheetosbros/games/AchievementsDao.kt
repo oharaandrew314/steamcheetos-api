@@ -1,13 +1,13 @@
 package io.andrewohara.cheetosbros.games
 
-import io.andrewohara.cheetosbros.lib.batchPut
+import io.andrewohara.cheetosbros.sources.AchievementData
 import io.andrewohara.dynamokt.DynamoKtConverted
 import io.andrewohara.dynamokt.DynamoKtPartitionKey
 import io.andrewohara.dynamokt.DynamoKtSortKey
+import io.andrewohara.utils.dynamodb.v2.batchPut
 import org.http4k.core.Uri
 import software.amazon.awssdk.enhanced.dynamodb.*
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
-import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue
 import java.time.Instant
 
@@ -39,13 +39,33 @@ data class Achievement(
     val name: String,
     val description: String?,
     val hidden: Boolean,
-    val score: Int?,
     val unlockedOn: Instant?,
 
     @DynamoKtConverted(UriConverter::class)
-    val iconLocked: Uri?,
+    val iconLocked: Uri,
     @DynamoKtConverted(UriConverter::class)
-    val iconUnlocked: Uri?,
+    val iconUnlocked: Uri,
+)
+
+fun Achievement.toData() = AchievementData(
+    gameId = libraryId.gameId,
+    id = id,
+    name = name,
+    description = description,
+    hidden = hidden,
+    iconUnlocked = iconUnlocked,
+    iconLocked = iconLocked
+)
+
+fun AchievementData.toAchievement(userId: String, unlockedOn: Instant?) = Achievement(
+    libraryId = LibraryId(userId, gameId),
+    id = id,
+    name = name,
+    description = description,
+    hidden = hidden,
+    iconLocked = iconLocked,
+    iconUnlocked = iconUnlocked,
+    unlockedOn = unlockedOn
 )
 
 data class LibraryId(

@@ -1,13 +1,13 @@
-package io.andrewohara.cheetosbros.api
+package io.andrewohara.cheetosbros
 
+import io.andrewohara.cheetosbros.api.ServiceBuilder
 import io.andrewohara.cheetosbros.api.auth.KmsAuthorizationDao
 import org.http4k.client.JavaHttpClient
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Uri
-import org.http4k.filter.AnyOf
-import org.http4k.filter.CorsPolicy
-import org.http4k.filter.OriginPolicy
+import org.http4k.core.then
+import org.http4k.filter.*
 import org.http4k.serverless.ApiGatewayV2LambdaFunction
 import org.http4k.serverless.AppLoader
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
@@ -27,37 +27,30 @@ object ApiLambdaLoader: AppLoader {
             credentials = true
         )
 
-        val gameService = ServiceBuilder.gameService(
+        val steamBackend = ClientFilters
+            .SetBaseUriFrom(Uri.of("https://api.steampowered.com"))
+            .then(RequestFilters.Modify({ it.query("key", env.getValue("STEAM_API_KEY"))}))
+            .then(JavaHttpClient())
+
+        val service = ServiceBuilder.gameService(
             dynamo = dynamo,
             achievementsTableName = env.getValue("ACHIEVEMENTS_TABLE"),
-            gamesTableName = env.getValue("GAMES_TABLE")
+            gamesTableName = env.getValue("GAMES_TABLE"),
+            steamBackend = steamBackend,
+            clock = Clock.systemUTC(),
         )
 
-        val syncService = ServiceBuilder.syncService(
-            steamBackend = JavaHttpClient(),
-            steamApiKey = env.getValue("STEAM_API_KEY"),
-            clock = Clock.systemUTC(),
-            gameService = gameService
-        )
-
-        val jobService = ServiceBuilder.jobService(
-            dynamo = dynamo,
-            jobsTableName = env.getValue("JOBS_TABLE"),
-            clock = Clock.systemUTC(),
-            syncService = syncService
+        val auth = ServiceBuilder.authService(
+            serverHost = Uri.of(env.getValue("SERVER_HOST")),
+            authDao = KmsAuthorizationDao(
+                kms = kms,
+                keyId = env.getValue("AUTH_KEY_ID")
+            )
         )
 
         return ServiceBuilder.api(
-            gameService = gameService,
-            authService = ServiceBuilder.authService(
-                serverHost = Uri.of(env.getValue("SERVER_HOST")),
-                authDao = KmsAuthorizationDao(
-                    kms = kms,
-                    keyId = env.getValue("AUTH_KEY_ID")
-                )
-            ),
-            jobService = jobService,
-            syncService = syncService,
+            cheetosService = service,
+            authService = auth,
             corsPolicy = corsPolicy
         )
     }

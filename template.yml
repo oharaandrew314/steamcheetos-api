@@ -22,7 +22,6 @@ Globals:
         ACHIEVEMENTS_TABLE: !Ref Achievements
         STEAM_API_KEY: !Ref SteamApiKey
         CORS_ORIGINS: !Join [ ',', !Ref CorsOrigins ]
-        JOBS_TABLE: !Ref Jobs
         SERVER_HOST: !Ref ServerHost
 
 Resources:
@@ -37,38 +36,16 @@ Resources:
         ExposeHeaders: [ '*' ]
       DisableExecuteApiEndpoint: true
 
-  SyncWorker:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      Timeout: 60
-      Handler: io.andrewohara.cheetosbros.sync.SyncLambdaHandler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Games
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Achievements
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Jobs
-      Events:
-        WorkQueue:
-          Type: DynamoDB
-          Properties:
-            Stream: !GetAtt Jobs.StreamArn
-            StartingPosition: TRIM_HORIZON
-            BatchSize: 5
-
   ApiHandler:
     Type: 'AWS::Serverless::Function'
     Properties:
       Timeout: 10
-      Handler: io.andrewohara.cheetosbros.api.ApiLambdaHandler
+      Handler: io.andrewohara.cheetosbros.ApiLambdaHandler
       Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref Games
-        - DynamoDBReadPolicy:
-            TableName: !Ref Achievements
         - DynamoDBCrudPolicy:
-            TableName: !Ref Jobs
+            TableName: !Ref Games
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Achievements
         - KMSEncryptPolicy:
             KeyId: !Ref EncryptionKey
         - KMSDecryptPolicy:
@@ -131,23 +108,3 @@ Resources:
           KeyType: HASH
         - AttributeName: id
           KeyType: RANGE
-
-  Jobs:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: userId
-          AttributeType: S
-        - AttributeName: gameId
-          AttributeType: S
-      KeySchema:
-        - AttributeName: userId
-          KeyType: HASH
-        - AttributeName: gameId
-          KeyType: RANGE
-      StreamSpecification:
-        StreamViewType: NEW_IMAGE
-      TimeToLiveSpecification:
-        AttributeName: expires
-        Enabled: true
