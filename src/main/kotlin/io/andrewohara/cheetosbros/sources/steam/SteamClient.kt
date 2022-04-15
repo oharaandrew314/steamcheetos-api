@@ -23,7 +23,7 @@ class SteamClient(private val client: HttpHandler) {
 
         val steamIds = Query.string().required("steamids")
         val steamId = Query.long().required("steamid")
-        val appIds = Query.nonEmptyString().required("appids")
+//        val appIds = Query.nonEmptyString().required("appids")
         val appId = Query.long().required("appid")
         val count = Query.int().optional("count")
     }
@@ -52,7 +52,8 @@ class SteamClient(private val client: HttpHandler) {
                 GameData(
                     id = game.appid.toString(),
                     name = game.name,
-                    displayImage = Uri.of("http://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_logo_url}.jpg")
+                    displayImage = Uri.of("https://cdn.akamai.steamstatic.com/steam/apps/${game.appid}/header.jpg")
+//                    displayImage = Uri.of("http://media.steampowered.com/steamcommunity/public/images/apps/${game.appid}/${game.img_logo_url}.jpg")
                 )
             }
     }

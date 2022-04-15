@@ -9,9 +9,9 @@ data class GetOwnedGamesResponse(
     ) {
         data class Game(
             val appid: Int,
-                val name: String,
-//                val img_icon_url: String,
-                val img_logo_url: String,
+            val name: String,
+//            val img_icon_url: String?,
+//            val img_logo_url: String,
 //                val has_community_visible_stats: Boolean?,
 //                val playtime_forever: Int,
 //                val playtime_windows_forever: Int,
@@ -32,7 +32,7 @@ data class GetRecentlyPlayedResponse(
             val appid: Int,
             val name: String,
 //                val img_icon_url: String,
-            val img_logo_url: String,
+//            val img_logo_url: String,
 //                val has_community_visible_stats: Boolean?,
 //                val playtime_forever: Int,
 //                val playtime_windows_forever: Int,

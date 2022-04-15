@@ -33,7 +33,7 @@ class FakeSteamBackend: HttpHandler {
             .map { game ->
                 GetOwnedGamesResponse.Data.Game(
                     appid = game.id.toInt(),
-                    img_logo_url = game.displayImage.toString(),
+//                    img_logo_url = game.displayImage.toString(),
                     name = game.name
                 )
             }
@@ -158,7 +158,7 @@ class FakeSteamBackend: HttpHandler {
                 GetRecentlyPlayedResponse.Data.Game(
                     appid = game.id.toInt(),
                     name = game.name,
-                    img_logo_url = game.displayImage.toString()
+//                    img_logo_url = game.displayImage.toString()
                 )
             }
 
