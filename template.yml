@@ -23,6 +23,7 @@ Globals:
         STEAM_API_KEY: !Ref SteamApiKey
         CORS_ORIGINS: !Join [ ',', !Ref CorsOrigins ]
         SERVER_HOST: !Ref ServerHost
+        JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
 
 Resources:
   Api:
@@ -41,6 +42,7 @@ Resources:
     Properties:
       Timeout: 10
       Handler: io.andrewohara.cheetosbros.ApiLambdaHandler
+#      Tracing: Active
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref Games

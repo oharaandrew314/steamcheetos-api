@@ -8,8 +8,9 @@ repositories {
 }
 
 dependencies {
-    implementation(platform("org.http4k:http4k-bom:4.25.6.0"))
+    implementation(platform("org.http4k:http4k-bom:4.25.9.0"))
     implementation(platform("software.amazon.awssdk:bom:2.17.160"))
+    implementation(platform("io.opentelemetry:opentelemetry-bom:1.12.0"))
 
     implementation(kotlin("stdlib"))
     implementation("software.amazon.awssdk:dynamodb-enhanced")
@@ -21,7 +22,10 @@ dependencies {
     implementation("org.http4k:http4k-serverless-lambda")
     implementation("org.http4k:http4k-contract")
     implementation("org.http4k:http4k-format-jackson")
+//    implementation("org.http4k:http4k-opentelemetry")
     implementation("com.github.oharaandrew314:openid4java:1.1.2")
+//    implementation("io.opentelemetry:opentelemetry-extension-aws")
+//    implementation("io.opentelemetry.instrumentation:opentelemetry-aws-sdk-2.2:1.12.1-alpha")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
