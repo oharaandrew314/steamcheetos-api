@@ -3,6 +3,7 @@ package io.andrewohara.cheetosbros
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -12,8 +13,6 @@ class CheetosServiceTest {
     private val driver = TestDriver()
     private val testObj = driver.service
     private val userId = "1111"
-
-    // list games
 
     @Test
     fun `list games for missing user`() {
@@ -30,8 +29,6 @@ class CheetosServiceTest {
         )
     }
 
-    // list achievements
-
     @Test
     fun `list achievements for missing game`() {
         testObj.listAchievements(userId, "missingGame").shouldBeEmpty()
@@ -45,8 +42,6 @@ class CheetosServiceTest {
         testObj.listAchievements(userId, me3.game.id) shouldContainExactlyInAnyOrder  me3.achievements
         testObj.listAchievements(userId, satisfactory.game.id) shouldContainExactlyInAnyOrder satisfactory.achievements
     }
-
-    // refresh games
 
     @Test
     fun `refresh games - none yet saved, and none played recently`() {
@@ -87,8 +82,6 @@ class CheetosServiceTest {
         driver.achievementsDao[userId, factorioData.id] shouldHaveSize 1
     }
 
-    // refresh achievements
-
     @Test
     fun `sync achievements for game where user has progress`() {
         driver.steam += godOfWarData
@@ -103,5 +96,44 @@ class CheetosServiceTest {
             .shouldNotBeNull()
             .shouldHaveSize(2)
             .count { it.unlockedOn != null } shouldBe 1
+    }
+
+    @Test
+    fun `set game favourite - not found`() {
+        testObj.updateGame(userId, godOfWarData.id, favourite = true) shouldBe null
+    }
+
+    @Test
+    fun `set game favourite`() {
+        val created = driver.createGame(userId, godOfWarData, emptyList(), emptyList())
+
+        val expected = created.game.copy(favourite = true)
+        testObj.updateGame(userId, godOfWarData.id, favourite = true) shouldBe expected
+        driver.gamesDao[userId, godOfWarData.id] shouldBe expected
+    }
+
+    @Test
+    fun `set game not favourite`() {
+        val created = driver.createGame(userId, godOfWarData, emptyList(), emptyList(), favourite = true)
+
+        val expected = created.game.copy(favourite = false)
+        testObj.updateGame(userId, godOfWarData.id, favourite = false) shouldBe expected
+        driver.gamesDao[userId, godOfWarData.id] shouldBe expected
+    }
+
+    @Test
+    fun `set achievement favourite - not found`() {
+        driver.createGame(userId, godOfWarData, emptyList(), emptyList())
+
+        testObj.updateAchievement(userId, godOfWarData.id, godOfWarAchievement1Data.id, favourite = true).shouldBeNull()
+    }
+
+    @Test
+    fun `set achievement favourite`() {
+        driver.createGame(userId, godOfWarData, listOf(godOfWarAchievement1Data), emptyList())
+
+        testObj.updateAchievement(userId, godOfWarData.id, godOfWarAchievement1Data.id, favourite = true)
+            .shouldNotBeNull()
+            .favourite shouldBe true
     }
 }

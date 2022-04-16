@@ -20,15 +20,19 @@ class ApiV1(
 
     object Lenses {
         val gameId = Path.nonEmptyString().of("game_id")
+        val achievementId = Path.nonEmptyString().of("achievement_id")
         val clientCallback = Path.base64().of("client_callback")
 
         val redirectUri = Query.uri().required("redirect_uri")
 
         val gamesList = Body.auto<List<GameDtoV1>>().toLens()
         val game = Body.auto<GameDtoV1>().toLens()
+        val achievement = Body.auto<AchievementDtoV1>().toLens()
         val achievementList = Body.auto<List<AchievementDtoV1>>().toLens()
         val user = Body.auto<UserDtoV1>().toLens()
         val text = Body.nonEmptyString(ContentType.TEXT_PLAIN).toLens()
+        val updateGame = Body.auto<UpdateGameRequestV1>().toLens()
+        val updateAchievement = Body.auto<UpdateAchievementRequestV1>().toLens()
     }
 
     object Tags {
@@ -73,6 +77,27 @@ class ApiV1(
         }
     }
 
+    private val updateGame: ContractRoute = "/v1/games" / Lenses.gameId meta {
+        operationId = "updateGameV1"
+        summary = "Update Game"
+        tags += Tags.games
+        receiving(Lenses.updateGame to Examples.updateGame)
+        returning(Status.OK, Lenses.game to Examples.game)
+        returning(
+            Status.UNAUTHORIZED to "unauthorized user",
+            Status.NOT_FOUND to "game not found"
+        )
+        security = apiSecurity
+    } bindContract Method.PUT to { game ->
+        { request ->
+            val userId = authLens(request)
+            val data = Lenses.updateGame(request)
+            service.updateGame(userId, game, data.favourite)
+                ?.let { Response(Status.OK).with(Lenses.game of it.toDtoV1()) }
+                ?: Response(Status.NOT_FOUND)
+        }
+    }
+
     private val listAchievements: ContractRoute = "/v1/games" / Lenses.gameId / "achievements" meta {
         operationId = "listAchievementsV1"
         summary = "List Achievements"
@@ -103,6 +128,25 @@ class ApiV1(
 
             service.refreshAchievements(userId, gameId)
                 ?.let { Response(Status.OK).with(Lenses.achievementList of it.toDtoV1s()) }
+                ?: Response(Status.NOT_FOUND)
+        }
+    }
+
+    private val updateAchievement: ContractRoute = "/v1/games" / Lenses.gameId / "achievements" / Lenses.achievementId meta {
+        operationId = "updateAchievementV1"
+        summary = "Update Achievement"
+        tags += Tags.games
+        receiving(Lenses.updateAchievement to Examples.updateAchievement)
+        returning(Status.OK, Lenses.achievement to Examples.achievement)
+        returning(Status.UNAUTHORIZED to "unauthorized user", Status.NOT_FOUND to "achievement not found")
+        security = apiSecurity
+    } bindContract Method.PUT to { gameId, _, achievementId ->
+        { request ->
+            val userId = authLens(request)
+            val data = Lenses.updateAchievement(request)
+
+            service.updateAchievement(userId, gameId, achievementId, favourite = data.favourite)
+                ?.let { Response(Status.OK).with(Lenses.achievement of it.toDtoV1()) }
                 ?: Response(Status.NOT_FOUND)
         }
     }
@@ -161,6 +205,8 @@ class ApiV1(
         authCallback,
         getUser,
         listAchievements,
-        refreshAchievements
+        refreshAchievements,
+        updateGame,
+        updateAchievement
     )
 }

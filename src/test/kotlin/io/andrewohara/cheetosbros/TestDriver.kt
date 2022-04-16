@@ -73,8 +73,10 @@ class TestDriver: HttpHandler {
 
     override fun invoke(request: Request) = api(request)
 
-    fun createGame(userId: String, gameData: GameData, achievementData: List<AchievementData>, unlockData: List<AchievementStatusData>): CreateGameResult {
-        val game = gameData.toGame(userId, clock.instant())
+    fun createGame(userId: String, gameData: GameData, achievementData: List<AchievementData>, unlockData: List<AchievementStatusData>, favourite: Boolean = false): CreateGameResult {
+        val game = gameData
+            .toGame(userId, clock.instant())
+            .copy(favourite = favourite)
 
         val unlocksById = unlockData.associate { it.achievementId to it.unlockedOn }
         val achievements = achievementData.map { it.toAchievement(userId, unlockedOn = unlocksById[it.id]) }

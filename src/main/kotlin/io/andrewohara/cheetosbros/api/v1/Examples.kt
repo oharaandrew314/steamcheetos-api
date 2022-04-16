@@ -11,7 +11,8 @@ object Examples {
         displayImage = Uri.of("http://example.com/image.jpg"),
         achievementsCurrent = 1,
         achievementsTotal = 10,
-        achievementsExpire = Instant.EPOCH
+        achievementsExpire = Instant.EPOCH,
+        favourite = false
     )
 
     val achievement = AchievementDtoV1(
@@ -22,11 +23,20 @@ object Examples {
         unlocked = true,
         unlockedOn = Instant.parse("2021-01-01T01:00:00Z"),
         iconLocked = Uri.of("http://cheetos.com/locked.png"),
-        iconUnlocked = Uri.of("http://cheetos.com/unlocked.png")
+        iconUnlocked = Uri.of("http://cheetos.com/unlocked.png"),
+        favourite = false
     )
 
     val user = UserDtoV1(
         name = "xxCheetoHunter420xx",
         avatar = Uri.of("https://images.google.ca/slayer.jpg")
+    )
+
+    val updateGame = UpdateGameRequestV1(
+        favourite = true
+    )
+
+    val updateAchievement = UpdateAchievementRequestV1(
+        favourite = true
     )
 }

@@ -52,6 +52,12 @@ class CheetosService(
         return gamesDao[userId]
     }
 
+    fun updateGame(userId: String, gameId: String, favourite: Boolean): Game? {
+        return gamesDao[userId, gameId]
+            ?.copy(favourite =  favourite)
+            ?.also { gamesDao += it }
+    }
+
     fun listAchievements(userId: String, gameId: String): Collection<Achievement> {
         return achievementsDao[userId, gameId]
     }
@@ -59,6 +65,12 @@ class CheetosService(
     fun refreshAchievements(userId: String, gameId: String): List<Achievement>? {
         val game = gamesDao[userId, gameId] ?: return null
         return refreshAchievements(game)
+    }
+
+    fun updateAchievement(userId: String, gameId: String, achievementId: String, favourite: Boolean): Achievement? {
+        return achievementsDao[userId, gameId, achievementId]
+            ?.copy(favourite = favourite)
+            ?.also { achievementsDao += it }
     }
 
     private fun refreshAchievements(game: Game): List<Achievement> {

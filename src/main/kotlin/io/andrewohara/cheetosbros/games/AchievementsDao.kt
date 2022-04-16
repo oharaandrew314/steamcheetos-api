@@ -17,6 +17,10 @@ class AchievementsDao(private val client: DynamoDbEnhancedClient, private val ta
         table.batchPut(client, achievements)
     }
 
+    operator fun plusAssign(achievement: Achievement) {
+        table.putItem(achievement)
+    }
+
     operator fun get(userId: String, gameId: String): Collection<Achievement> {
         val key = Key.builder()
             .partitionValue("$userId:$gameId")
@@ -26,6 +30,15 @@ class AchievementsDao(private val client: DynamoDbEnhancedClient, private val ta
             .asSequence()
             .flatMap { it.items() }
             .toList()
+    }
+
+    operator fun get(userId: String, gameId: String, achievementId: String): Achievement? {
+        val key = Key.builder()
+            .partitionValue("$userId:$gameId")
+            .sortValue(achievementId)
+            .build()
+
+        return table.getItem(key)
     }
 }
 
@@ -45,6 +58,8 @@ data class Achievement(
     val iconLocked: Uri,
     @DynamoKtConverted(UriConverter::class)
     val iconUnlocked: Uri,
+
+    val favourite: Boolean = false,
 )
 
 fun Achievement.toData() = AchievementData(

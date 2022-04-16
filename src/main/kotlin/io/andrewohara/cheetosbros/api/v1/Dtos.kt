@@ -13,6 +13,7 @@ data class GameDtoV1(
     val achievementsCurrent: Int?,
     val displayImage: Uri,
     val achievementsExpire: Instant,
+    val favourite: Boolean,
 )
 
 data class AchievementDtoV1(
@@ -24,7 +25,9 @@ data class AchievementDtoV1(
     val iconUnlocked: Uri?,
 
     val unlockedOn: Instant?,
-    val unlocked: Boolean
+    val unlocked: Boolean,
+
+    val favourite: Boolean,
 )
 
 data class UserDtoV1(
@@ -40,7 +43,8 @@ fun Achievement.toDtoV1() = AchievementDtoV1(
     iconLocked = iconLocked,
     iconUnlocked = iconUnlocked,
     unlocked = unlockedOn != null,
-    unlockedOn = unlockedOn
+    unlockedOn = unlockedOn,
+    favourite = favourite
 )
 
 fun Collection<Achievement>.toDtoV1s() = map { it.toDtoV1() }
@@ -51,10 +55,19 @@ fun Game.toDtoV1() = GameDtoV1(
     displayImage = displayImage,
     achievementsCurrent = achievementsUnlocked,
     achievementsTotal = achievementsTotal,
-    achievementsExpire = progressExpires
+    achievementsExpire = progressExpires,
+    favourite = favourite
 )
 
 fun UserData.toDtoV1() = UserDtoV1(
     name = username,
     avatar = avatar
+)
+
+data class UpdateGameRequestV1(
+    val favourite: Boolean
+)
+
+data class UpdateAchievementRequestV1(
+    val favourite: Boolean
 )

@@ -1,15 +1,12 @@
 package io.andrewohara.cheetosbros.api.v1
 
-import io.andrewohara.cheetosbros.TestDriver
-import io.andrewohara.cheetosbros.me3AchievementData
-import io.andrewohara.cheetosbros.me3Data
+import io.andrewohara.cheetosbros.*
 import io.kotest.matchers.be
 import io.kotest.matchers.collections.containExactly
 import io.kotest.matchers.collections.containExactlyInAnyOrder
-import org.http4k.core.Method
-import org.http4k.core.Request
-import org.http4k.core.Status
-import org.http4k.core.Uri
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
+import org.http4k.core.*
 import org.http4k.kotest.shouldHaveBody
 import org.http4k.kotest.shouldHaveStatus
 import org.junit.jupiter.api.Test
@@ -76,5 +73,57 @@ class ApiV1Test {
                 avatar = Uri.of("https://slayer.jpg")
             )
         ))
+    }
+
+    @Test
+    fun `set game favourite - not found`() {
+        Request(Method.PUT, "/v1/games/${godOfWarData.id}")
+            .with(ApiV1.Lenses.updateGame of UpdateGameRequestV1(favourite = true))
+            .asUser(userId)
+            .let(driver)
+            .shouldHaveStatus(Status.NOT_FOUND)
+    }
+
+    @Test
+    fun `set game favourite`() {
+        driver.createGame(userId, godOfWarData, emptyList(), emptyList())
+
+        val response = Request(Method.PUT, "/v1/games/${godOfWarData.id}")
+            .with(ApiV1.Lenses.updateGame of UpdateGameRequestV1(favourite = true))
+            .asUser(userId)
+            .let(driver)
+
+        response shouldHaveStatus Status.OK
+        ApiV1.Lenses.game(response).favourite shouldBe true
+
+        driver.gamesDao[userId, godOfWarData.id].shouldNotBeNull()
+            .favourite shouldBe true
+    }
+
+    @Test
+    fun `set achievement favourite - not found`() {
+        driver.createGame(userId, godOfWarData, emptyList(), emptyList())
+
+        Request(Method.PUT, "/v1/games/${godOfWarData.id}/achievements/${godOfWarAchievement1Data.id}")
+            .with(ApiV1.Lenses.updateGame of UpdateGameRequestV1(favourite = true))
+            .asUser(userId)
+            .let(driver)
+            .shouldHaveStatus(Status.NOT_FOUND)
+    }
+
+    @Test
+    fun `set achievement favourite`() {
+        driver.createGame(userId, godOfWarData, listOf(godOfWarAchievement1Data), emptyList())
+
+        val response = Request(Method.PUT, "/v1/games/${godOfWarData.id}/achievements/${godOfWarAchievement1Data.id}")
+            .with(ApiV1.Lenses.updateGame of UpdateGameRequestV1(favourite = true))
+            .asUser(userId)
+            .let(driver)
+
+        response shouldHaveStatus Status.OK
+        ApiV1.Lenses.achievement(response).favourite shouldBe true
+
+        driver.achievementsDao[userId, godOfWarData.id, godOfWarAchievement1Data.id].shouldNotBeNull()
+            .favourite shouldBe true
     }
 }

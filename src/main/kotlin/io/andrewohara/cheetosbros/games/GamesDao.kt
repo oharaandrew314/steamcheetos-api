@@ -56,7 +56,9 @@ data class Game(
     val achievementDataExpires: Instant = Instant.EPOCH,
 
     val achievementsUnlocked: Int?,
-    val progressExpires: Instant = Instant.EPOCH
+    val progressExpires: Instant = Instant.EPOCH,
+
+    val favourite: Boolean = false,
 )
 
 fun GameData.toGame(userId: String, time: Instant) = Game(
