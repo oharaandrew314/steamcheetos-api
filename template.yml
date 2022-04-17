@@ -5,6 +5,12 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
   CorsOrigins:
     Type: CommaDelimitedList
+  CdnHostname:
+    Type: String
+    Default: https://cdn.steamcheetos.com
+#  CdnCertificateArn:
+#    Type: String
+#    ARN of the CDN's ACM certificate
   ServerHost:
     Type: String
   KeyAdminUsername:
@@ -24,6 +30,7 @@ Globals:
         CORS_ORIGINS: !Join [ ',', !Ref CorsOrigins ]
         SERVER_HOST: !Ref ServerHost
         JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
+        CDN_HOST: !Ref CdnHostname
 
 Resources:
   Api:
@@ -110,3 +117,26 @@ Resources:
           KeyType: HASH
         - AttributeName: id
           KeyType: RANGE
+
+#  SteamCdn:
+#    Type: AWS::CloudFront::Distribution
+#    Properties:
+#      DistributionConfig:
+#        Aliases: [ !Ref CdnHostname ]
+#        DefaultCacheBehavior:
+#          AllowedMethods: [ GET, HEAD, OPTIONS ]
+#          CachedMethods: [ GET, HEAD, OPTIONS ]
+#          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+#          PathPattern: '*'
+#          ViewerProtocolPolicy: redirect-to-https
+#        Enabled: true
+#        Origins:
+#          - Id: steam-cdn
+#            DomainName: cdn.akamai.steamstatic.com
+#            CustomOriginConfig:
+#              OriginProtocolPolicy: https-only
+#        PriceClass: PriceClass_100
+#        ViewerCertificate:
+#          AcmCertificateArn: !Ref CdnCertificateArn
+#          MinimumProtocolVersion: TLSv1.2_2021
+#          SslSupportMethod: sni-only

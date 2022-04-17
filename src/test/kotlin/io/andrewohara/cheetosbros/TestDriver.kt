@@ -25,6 +25,7 @@ import java.time.Duration
 import java.time.Instant
 
 val tNow: Instant = Instant.parse("2021-03-04T01:00:00Z")
+val testCdnHost = Uri.of("https://cdn.cheetos.test")
 
 class TestDriver: HttpHandler {
 
@@ -56,7 +57,8 @@ class TestDriver: HttpHandler {
         progressRetention = Duration.ofDays(1),
         recentGameLimit = 2,
         syncTimeout = Duration.ofSeconds(10),
-        executor = SameThreadExecutorService()
+        executor = SameThreadExecutorService(),
+        imageCdnHost = testCdnHost
     )
 
     val auth = AuthService(

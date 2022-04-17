@@ -1,5 +1,7 @@
 package io.andrewohara.cheetosbros
 
+import io.andrewohara.cheetosbros.games.witImageHost
+import io.andrewohara.cheetosbros.games.withImageHost
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
@@ -25,7 +27,7 @@ class CheetosServiceTest {
         val satisfactory = driver.createGame(userId, satisfactoryData, satisfactoryAchievementData, emptyList())
 
         testObj.listGames(userId).shouldContainExactlyInAnyOrder(
-            me3.game, satisfactory.game
+            me3.game.withImageHost(testCdnHost), satisfactory.game.withImageHost(testCdnHost)
         )
     }
 
@@ -39,8 +41,8 @@ class CheetosServiceTest {
         val me3 = driver.createGame(userId, me3Data, me3AchievementData, emptyList())
         val satisfactory = driver.createGame(userId, satisfactoryData, satisfactoryAchievementData, emptyList())
 
-        testObj.listAchievements(userId, me3.game.id) shouldContainExactlyInAnyOrder  me3.achievements
-        testObj.listAchievements(userId, satisfactory.game.id) shouldContainExactlyInAnyOrder satisfactory.achievements
+        testObj.listAchievements(userId, me3.game.id) shouldContainExactlyInAnyOrder  me3.achievements.witImageHost(testCdnHost)
+        testObj.listAchievements(userId, satisfactory.game.id) shouldContainExactlyInAnyOrder satisfactory.achievements.witImageHost(testCdnHost)
     }
 
     @Test
@@ -57,7 +59,7 @@ class CheetosServiceTest {
 
         val results = testObj.refreshGames(userId).shouldHaveSize(2)
 
-        driver.gamesDao[userId] shouldContainExactlyInAnyOrder results
+        driver.gamesDao[userId].withImageHost(testCdnHost) shouldContainExactlyInAnyOrder results
         driver.achievementsDao[userId, godOfWarData.id] shouldHaveSize 0
         driver.achievementsDao[userId, factorioData.id] shouldHaveSize 0
     }
@@ -77,7 +79,7 @@ class CheetosServiceTest {
 
         val results = testObj.refreshGames(userId).shouldHaveSize(2)
 
-        driver.gamesDao[userId] shouldContainExactlyInAnyOrder results
+        driver.gamesDao[userId].withImageHost(testCdnHost) shouldContainExactlyInAnyOrder results
         driver.achievementsDao[userId, godOfWarData.id] shouldHaveSize 2
         driver.achievementsDao[userId, factorioData.id] shouldHaveSize 1
     }

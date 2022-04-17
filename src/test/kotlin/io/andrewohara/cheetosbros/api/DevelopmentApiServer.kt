@@ -31,7 +31,8 @@ object DevelopmentApiServer {
             dynamo = dynamo,
             achievementsTableName = env.getValue("ACHIEVEMENTS_TABLE"),
             gamesTableName = env.getValue("GAMES_TABLE"),
-            steamBackend = DebuggingFilters.PrintResponse().then(JavaHttpClient())
+            steamBackend = DebuggingFilters.PrintResponse().then(JavaHttpClient()),
+            imageCdnHost = Uri.of("https://cdn.steamcheetos.com")
         )
 
         val api = ServiceBuilder.api(

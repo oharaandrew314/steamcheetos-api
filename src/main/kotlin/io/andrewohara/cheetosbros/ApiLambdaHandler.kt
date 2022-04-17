@@ -62,6 +62,7 @@ object ApiLambdaLoader: AppLoader {
             gamesTableName = env.getValue("GAMES_TABLE"),
             steamBackend = steamBackend,
             clock = Clock.systemUTC(),
+            imageCdnHost = Uri.of(env.getValue("CDN_HOST"))
         )
 
         val auth = ServiceBuilder.authService(

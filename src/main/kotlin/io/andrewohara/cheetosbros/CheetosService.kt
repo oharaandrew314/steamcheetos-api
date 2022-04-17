@@ -3,6 +3,7 @@ package io.andrewohara.cheetosbros
 import io.andrewohara.cheetosbros.games.*
 import io.andrewohara.cheetosbros.sources.UserData
 import io.andrewohara.cheetosbros.sources.steam.SteamClient
+import org.http4k.core.Uri
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.ExecutorService
@@ -18,15 +19,16 @@ class CheetosService(
     private val progressRetention: Duration,
     private val recentGameLimit: Int,
     private val syncTimeout: Duration,
-    private val executor: ExecutorService
+    private val executor: ExecutorService,
+    private val imageCdnHost: Uri
 ) {
 
     fun getUser(userId: String): UserData? {
-        return steam.getPlayer(userId.toLong())
+        return steam.getPlayer(userId)
     }
 
     fun listGames(userId: String): Collection<Game> {
-        return gamesDao[userId]
+        return gamesDao[userId].withImageHost(imageCdnHost)
     }
 
     fun refreshGames(userId: String): List<Game> {
@@ -49,7 +51,7 @@ class CheetosService(
             }
 
 
-        return gamesDao[userId]
+        return gamesDao[userId].withImageHost(imageCdnHost)
     }
 
     fun updateGame(userId: String, gameId: String, favourite: Boolean): Game? {
@@ -59,12 +61,12 @@ class CheetosService(
     }
 
     fun listAchievements(userId: String, gameId: String): Collection<Achievement> {
-        return achievementsDao[userId, gameId]
+        return achievementsDao[userId, gameId].witImageHost(imageCdnHost)
     }
 
     fun refreshAchievements(userId: String, gameId: String): List<Achievement>? {
         val game = gamesDao[userId, gameId] ?: return null
-        return refreshAchievements(game)
+        return refreshAchievements(game).witImageHost(imageCdnHost)
     }
 
     fun updateAchievement(userId: String, gameId: String, achievementId: String, favourite: Boolean): Achievement? {
@@ -99,5 +101,10 @@ class CheetosService(
         gamesDao += updatedGame
 
         return achievements
+    }
+
+    fun getFriends(userId: String): Collection<UserData> {
+        val friendIds = steam.getFriends(userId)
+        return steam.getPlayers(friendIds)
     }
 }

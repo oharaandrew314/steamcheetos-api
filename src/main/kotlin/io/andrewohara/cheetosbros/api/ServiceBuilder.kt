@@ -32,7 +32,8 @@ object ServiceBuilder {
         achievementDataRetention: Duration = Duration.ofDays(30),
         progressRetention: Duration = Duration.ofDays(1),
         recentGameLimit: Int = 10,
-        syncTimeout: Duration = Duration.ofSeconds(10)
+        syncTimeout: Duration = Duration.ofSeconds(10),
+        imageCdnHost: Uri
     ) = CheetosService(
         gamesDao = GamesDao(dynamo, dynamo.table(gamesTableName, DataClassTableSchema(Game::class))),
         achievementsDao = AchievementsDao(dynamo, dynamo.table(achievementsTableName, DataClassTableSchema(Achievement::class))),
@@ -42,7 +43,8 @@ object ServiceBuilder {
         progressRetention = progressRetention,
         recentGameLimit = recentGameLimit,
         syncTimeout = syncTimeout,
-        executor = Executors.newCachedThreadPool()
+        executor = Executors.newCachedThreadPool(),
+        imageCdnHost = imageCdnHost
     )
 
     fun authService(

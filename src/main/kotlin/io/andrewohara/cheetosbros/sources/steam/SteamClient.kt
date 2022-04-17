@@ -117,33 +117,34 @@ class SteamClient(private val client: HttpHandler) {
             ?: emptyList()
     }
 
-    fun getPlayer(playerId: Long): UserData? {
+    fun getPlayer(playerId: String): UserData? {
+        return getPlayers(listOf(playerId))
+            .find { it.id == playerId }
+    }
+
+    fun getPlayers(playerIds: Collection<String>): Collection<UserData> {
         val response = Request(Method.GET, Paths.players)
-            .with(Lenses.steamIds of playerId.toString())
+            .with(Lenses.steamIds of playerIds.joinToString(","))
             .let(client)
 
         when (response.status) {
             Status.OK -> {}
-            Status.FORBIDDEN -> throw SourceAccessDenied("Could not retrieve achievement for player $playerId.  Profile is not public")
+            Status.FORBIDDEN -> throw SourceAccessDenied("Could not get profile for players: $playerIds")
             else -> throw IOException("Request failed: $response")
         }
 
-        return Lenses.playerSummaries(response)
-            .response
-            .players
-            .firstOrNull { it.steamid == playerId.toString() }
-            ?.let {
-                UserData(
-                        id = it.steamid,
-                        username = it.personaname,
-                        avatar = Uri.of(it.avatarfull)
-                )
-            }
+        return Lenses.playerSummaries(response).response.players.map {
+            UserData(
+                id = it.steamid,
+                username = it.personaname,
+                avatar = Uri.of(it.avatarfull)
+            )
+        }
     }
 
-    fun getFriends(playerId: Long): Collection<String> {
+    fun getFriends(playerId: String): Collection<String> {
         val response = Request(Method.GET, "ISteamUser/GetFriendList/V1")
-            .with(Lenses.steamId of playerId)
+            .with(Lenses.steamId of playerId.toLong())
             .query("relationship", "friend")
             .let(client)
 

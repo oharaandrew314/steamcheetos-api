@@ -1,6 +1,7 @@
 package io.andrewohara.cheetosbros.api.v1
 
 import io.andrewohara.cheetosbros.*
+import io.andrewohara.cheetosbros.games.withHost
 import io.kotest.matchers.be
 import io.kotest.matchers.collections.containExactly
 import io.kotest.matchers.collections.containExactlyInAnyOrder
@@ -34,7 +35,7 @@ class ApiV1Test {
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.gamesList, containExactly(created.game.toDtoV1()))
+        response.shouldHaveBody(ApiV1.Lenses.gamesList, containExactly(created.game.toDtoV1().withImageHost(testCdnHost)))
     }
 
     @Test
@@ -46,7 +47,7 @@ class ApiV1Test {
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.achievementList, containExactlyInAnyOrder(created.achievements.toDtoV1s()))
+        response.shouldHaveBody(ApiV1.Lenses.achievementList, containExactlyInAnyOrder(created.achievements.toDtoV1s().withImageHost(testCdnHost)))
     }
 
     @Test
@@ -126,4 +127,15 @@ class ApiV1Test {
         driver.achievementsDao[userId, godOfWarData.id, godOfWarAchievement1Data.id].shouldNotBeNull()
             .favourite shouldBe true
     }
+
+    private fun Collection<AchievementDtoV1>.withImageHost(host: Uri) = map {
+        it.copy(
+            iconLocked = Uri.of(it.iconLocked).withHost(host).toString(),
+            iconUnlocked = Uri.of(it.iconUnlocked).withHost(host).toString()
+        )
+    }
+
+    private fun GameDtoV1.withImageHost(host: Uri) = copy(
+        displayImage = Uri.of(displayImage).withHost(host).toString()
+    )
 }

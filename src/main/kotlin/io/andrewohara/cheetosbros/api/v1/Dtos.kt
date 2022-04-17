@@ -11,7 +11,7 @@ data class GameDtoV1(
     val name: String,
     val achievementsTotal: Int?,
     val achievementsCurrent: Int?,
-    val displayImage: Uri,
+    val displayImage: String,
     val achievementsExpire: Instant,
     val favourite: Boolean,
 )
@@ -21,8 +21,8 @@ data class AchievementDtoV1(
     val name: String,
     val description: String?,
     val hidden: Boolean,
-    val iconLocked: Uri?,
-    val iconUnlocked: Uri?,
+    val iconLocked: String,  // TODO only send current icon URL
+    val iconUnlocked: String,
 
     val unlockedOn: Instant?,
     val unlocked: Boolean,
@@ -40,8 +40,8 @@ fun Achievement.toDtoV1() = AchievementDtoV1(
     name = name,
     description = description,
     hidden = hidden,
-    iconLocked = iconLocked,
-    iconUnlocked = iconUnlocked,
+    iconLocked = iconLocked.toString(),
+    iconUnlocked = iconUnlocked.toString(),
     unlocked = unlockedOn != null,
     unlockedOn = unlockedOn,
     favourite = favourite
@@ -52,7 +52,7 @@ fun Collection<Achievement>.toDtoV1s() = map { it.toDtoV1() }
 fun Game.toDtoV1() = GameDtoV1(
     id = id,
     name = name,
-    displayImage = displayImage,
+    displayImage = displayImage.toString(),
     achievementsCurrent = achievementsUnlocked,
     achievementsTotal = achievementsTotal,
     achievementsExpire = progressExpires,
