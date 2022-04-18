@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros.api.v1
 
 import io.andrewohara.cheetosbros.games.Achievement
 import io.andrewohara.cheetosbros.games.Game
+import io.andrewohara.cheetosbros.sources.AchievementStatusData
 import io.andrewohara.cheetosbros.sources.UserData
 import org.http4k.core.Uri
 import java.time.Instant
@@ -30,7 +31,14 @@ data class AchievementDtoV1(
     val favourite: Boolean,
 )
 
+data class AchievementStatusDtoV1(
+    val id: String,
+    val unlockedOn: Instant?,
+    val unlocked: Boolean
+)
+
 data class UserDtoV1(
+    val id: String,
     val name: String,
     val avatar: Uri?
 )
@@ -60,8 +68,15 @@ fun Game.toDtoV1() = GameDtoV1(
 )
 
 fun UserData.toDtoV1() = UserDtoV1(
+    id = id,
     name = username,
     avatar = avatar
+)
+
+fun AchievementStatusData.toDtoV1() = AchievementStatusDtoV1(
+    id = achievementId,
+    unlocked = unlockedOn != null,
+    unlockedOn = unlockedOn
 )
 
 data class UpdateGameRequestV1(

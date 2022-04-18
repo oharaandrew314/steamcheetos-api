@@ -34,13 +34,14 @@ class SteamClient(private val client: HttpHandler) {
         const val userAchievements = "ISteamUserStats/GetPlayerAchievements/V1"
         const val players = "ISteamUser/GetPlayerSummaries/V2"
         const val recentlyPlayedGames = "/IPlayerService/GetRecentlyPlayedGames/v1/"
+        const val friends = "ISteamUser/GetFriendList/V1"
     }
 
     fun listOwnedGames(playerId: Long): Collection<GameData> {
         val request = Request(Method.GET, Paths.ownedGames)
             .with(Lenses.steamId of playerId)
-            .query("include_appinfo", "1")
-            .query("include_played_free_games", "1")
+            .query("include_appinfo", "true")
+            .query("include_played_free_games", "true")
 
         val response = client(request)
         if (!response.status.successful) throw IllegalStateException("Request failed: $response")
@@ -143,7 +144,7 @@ class SteamClient(private val client: HttpHandler) {
     }
 
     fun getFriends(playerId: String): Collection<String> {
-        val response = Request(Method.GET, "ISteamUser/GetFriendList/V1")
+        val response = Request(Method.GET, Paths.friends)
             .with(Lenses.steamId of playerId.toLong())
             .query("relationship", "friend")
             .let(client)

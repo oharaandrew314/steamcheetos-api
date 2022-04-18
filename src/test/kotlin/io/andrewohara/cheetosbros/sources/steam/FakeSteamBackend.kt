@@ -14,9 +14,10 @@ typealias AppId = Long
 
 class FakeSteamBackend: HttpHandler {
 
-    private var nextId = 0
+    private var nextId = 0L
 
     private val players = mutableMapOf<SteamId, UserData>()
+    private val friends = mutableSetOf<Pair<SteamId, SteamId>>()
     private val games = mutableMapOf<AppId, GameData>()
 
     private val userGames = mutableSetOf<Pair<SteamId, AppId>>()
@@ -172,11 +173,36 @@ class FakeSteamBackend: HttpHandler {
         return Response(Status.OK).with(SteamClient.Lenses.recentlyPlayed of response)
     }
 
-    fun createUser(displayName: String, avatar: String? = null): UserData {
-        val id = nextId++.toString()
+    private fun getFriends(request: Request): Response {
+        val userId = SteamClient.Lenses.steamId(request)
+
+        val friendList = friends
+            .filter { it.first == userId }
+            .map { (_, id) ->
+                GetFriendListResponse.Friend(
+                    steamid = id.toString(),
+                    relationship = "friend",
+                    friend_since = 0
+                )
+            }
+
+        val response = GetFriendListResponse(
+            friendslist = GetFriendListResponse.FriendsList(
+                friends = friendList
+            )
+        )
+
+        return Response(Status.OK).with(SteamClient.Lenses.friendsList of response)
+    }
+
+    fun createUser(
+        displayName: String,
+        id: Long = nextId++,
+        avatar: Uri = Uri.of("$id.jpg")
+    ): UserData {
         val user = UserData(
-            id = id,
-            avatar = avatar?.let { Uri.of(it) },
+            id = id.toString(),
+            avatar = avatar,
             username = displayName
         )
 
@@ -200,6 +226,12 @@ class FakeSteamBackend: HttpHandler {
         recentlyPlayed += userId.toLong() to game.id.toLong()
     }
 
+    fun addFriend(userId: SteamId, friendId: SteamId) {
+        if (players.none { it.key == friendId }) throw IllegalArgumentException("Cannot add friend $friendId that does not exist")
+
+        friends += userId to friendId
+    }
+
     fun unlockAchievement(userId: String, achievement: AchievementData, unlocked: Instant?): AchievementStatusData {
         val status = AchievementStatusData(
             achievementId = achievement.id,
@@ -217,6 +249,7 @@ class FakeSteamBackend: HttpHandler {
         SteamClient.Paths.userAchievements bind Method.GET to ::userAchievements,
         SteamClient.Paths.players bind Method.GET to ::getPlayers,
         SteamClient.Paths.recentlyPlayedGames bind Method.GET to ::getRecentlyPlayed,
+        SteamClient.Paths.friends bind Method.GET to ::getFriends,
     )
 
     override fun invoke(request: Request) = routes(request)

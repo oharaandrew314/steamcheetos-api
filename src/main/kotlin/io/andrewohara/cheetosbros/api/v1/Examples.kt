@@ -28,6 +28,7 @@ object Examples {
     )
 
     val user = UserDtoV1(
+        id = "69420",
         name = "xxCheetoHunter420xx",
         avatar = Uri.of("https://images.google.ca/slayer.jpg")
     )
@@ -38,5 +39,11 @@ object Examples {
 
     val updateAchievement = UpdateAchievementRequestV1(
         favourite = true
+    )
+
+    val achievementStatus = AchievementStatusDtoV1(
+        id = "ACH123",
+        unlocked = true,
+        unlockedOn = Instant.EPOCH,
     )
 }

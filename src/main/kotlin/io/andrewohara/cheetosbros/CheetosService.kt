@@ -1,6 +1,7 @@
 package io.andrewohara.cheetosbros
 
 import io.andrewohara.cheetosbros.games.*
+import io.andrewohara.cheetosbros.sources.AchievementStatusData
 import io.andrewohara.cheetosbros.sources.UserData
 import io.andrewohara.cheetosbros.sources.steam.SteamClient
 import org.http4k.core.Uri
@@ -62,6 +63,10 @@ class CheetosService(
 
     fun listAchievements(userId: String, gameId: String): Collection<Achievement> {
         return achievementsDao[userId, gameId].witImageHost(imageCdnHost)
+    }
+
+    fun listAchievementStatus(gameId: String, userId: String): Collection<AchievementStatusData> {
+        return steam.userAchievements(gameId = gameId.toLong(), playerId = userId.toLong())
     }
 
     fun refreshAchievements(userId: String, gameId: String): List<Achievement>? {

@@ -2,6 +2,7 @@ package io.andrewohara.cheetosbros
 
 import io.andrewohara.cheetosbros.games.witImageHost
 import io.andrewohara.cheetosbros.games.withImageHost
+import io.andrewohara.cheetosbros.sources.AchievementStatusData
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
@@ -137,5 +138,31 @@ class CheetosServiceTest {
         testObj.updateAchievement(userId, godOfWarData.id, godOfWarAchievement1Data.id, favourite = true)
             .shouldNotBeNull()
             .favourite shouldBe true
+    }
+
+    @Test
+    fun `get friends`() {
+        val friend1 = driver.steam.createUser("tom")
+        val friend2 = driver.steam.createUser("hank")
+
+        driver.steam.addFriend(userId = userId.toLong(), friendId = friend1.id.toLong())
+        driver.steam.addFriend(userId = userId.toLong(), friendId = friend2.id.toLong())
+
+        testObj.getFriends(userId).shouldContainExactlyInAnyOrder(
+            friend1, friend2
+        )
+    }
+
+    @Test
+    fun `list achievements status`() {
+        driver.steam += godOfWarData
+        driver.steam += godOfWarAchievement1Data
+        driver.steam += godOfWarAchievement2Data
+        driver.steam.unlockAchievement(userId, godOfWarAchievement1Data, tNow)
+
+        testObj.listAchievementStatus(gameId = godOfWarData.id, userId = userId) shouldContainExactlyInAnyOrder listOf(
+            AchievementStatusData(achievementId = godOfWarAchievement1Data.id, unlockedOn = tNow),
+            AchievementStatusData(achievementId = godOfWarAchievement2Data.id, unlockedOn = null)
+        )
     }
 }

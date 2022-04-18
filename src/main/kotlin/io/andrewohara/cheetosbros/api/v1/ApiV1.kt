@@ -30,6 +30,7 @@ class ApiV1(
         val game = Body.auto<GameDtoV1>().toLens()
         val achievement = Body.auto<AchievementDtoV1>().toLens()
         val achievementList = Body.auto<List<AchievementDtoV1>>().toLens()
+        val achievementStatusList = Body.auto<List<AchievementStatusDtoV1>>().toLens()
         val user = Body.auto<UserDtoV1>().toLens()
         val users = Body.auto<List<UserDtoV1>>().toLens()
         val text = Body.nonEmptyString(ContentType.TEXT_PLAIN).toLens()
@@ -115,20 +116,20 @@ class ApiV1(
             Response(Status.OK).with(Lenses.achievementList of results)
         }
     }
-//
-//    private val listAchievementsForUser: ContractRoute = "/v1/users" / Lenses.userId / "games" / Lenses.gameId / "achievements" meta {
-//        operationId = "listAchievementsForUser"
-//        summary = "List Achievements for User"
-//        tags += Tags.games
-//        returning(Status.UNAUTHORIZED to "unauthorized user")
-//        returning(Status.OK, Lenses.achievementList to listOf(Examples.achievement))
-//        security = apiSecurity
-//    } bindContract Method.GET to { userId, _, gameId, _ ->
-//        {
-//            val results = service.listAchievements(userId, gameId).toDtoV1s()
-//            Response(Status.OK).with(Lenses.achievementList of results)
-//        }
-//    }
+
+    private val listAchievementsForFriend: ContractRoute = "v1/games" / Lenses.gameId / "friends" / Lenses.userId / "achievements" meta {
+        operationId = "listAchievementsForUser"
+        summary = "List Achievements for User"
+        tags += Tags.games
+        returning(Status.UNAUTHORIZED to "unauthorized user")
+        returning(Status.OK, Lenses.achievementStatusList to listOf(Examples.achievementStatus))
+        security = apiSecurity
+    } bindContract Method.GET to { gameId, _, userId, _ ->
+        {
+            val results = service.listAchievementStatus(userId = userId, gameId = gameId).map { it.toDtoV1() }
+            Response(Status.OK).with(Lenses.achievementStatusList of results)
+        }
+    }
 
     private val refreshAchievements: ContractRoute = "/v1/games" / Lenses.gameId / "achievements" meta {
         operationId = "refreshAchievementsV1"
@@ -214,20 +215,20 @@ class ApiV1(
             ?: Response(Status.NO_CONTENT)
     }
 
-//    private val getFriends: ContractRoute = "/v1/friends" meta {
-//        operationId = "getFriends"
-//        summary = "Get Friends"
-//        security = apiSecurity
-//        tags += Tags.users
-//        returning(Status.OK, Lenses.users to listOf(Examples.user))
-//        returning(Status.UNAUTHORIZED to "unauthorized")
-//    } bindContract Method.GET to { ->
-//        { request ->
-//            val userId = authLens(request)
-//            val friends = service.getFriends(userId).map { it.toDtoV1() }
-//            Response(Status.OK).with(Lenses.users of friends)
-//        }
-//    }
+    private val getFriends: ContractRoute = "/v1/friends" meta {
+        operationId = "getFriends"
+        summary = "Get Friends"
+        security = apiSecurity
+        tags += Tags.users
+        returning(Status.OK, Lenses.users to listOf(Examples.user))
+        returning(Status.UNAUTHORIZED to "unauthorized")
+    } bindContract Method.GET to { ->
+        { request ->
+            val userId = authLens(request)
+            val friends = service.getFriends(userId).map { it.toDtoV1() }
+            Response(Status.OK).with(Lenses.users of friends)
+        }
+    }
 
     fun routes(): List<ContractRoute> = listOf(
         listGames,
@@ -238,6 +239,8 @@ class ApiV1(
         listAchievements,
         refreshAchievements,
         updateGame,
-        updateAchievement
+        updateAchievement,
+        getFriends,
+        listAchievementsForFriend
     )
 }

@@ -29,7 +29,7 @@ Globals:
         STEAM_API_KEY: !Ref SteamApiKey
         CORS_ORIGINS: !Join [ ',', !Ref CorsOrigins ]
         SERVER_HOST: !Ref ServerHost
-        JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1
+        JAVA_TOOL_OPTIONS: -XX:+TieredCompilation -XX:TieredStopAtLevel=1  # Optimize AOT compilation for cold-start time
         CDN_HOST: !Ref CdnHostname
 
 Resources:

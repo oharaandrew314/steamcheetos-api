@@ -16,6 +16,7 @@ class ApiV1Test {
 
     private val driver = TestDriver()
     private val userId = "1337"
+    private val friendId = "9001"
 
     private fun Request.asUser(id: String) = header("Authorization", "Bearer $id")
 
@@ -61,19 +62,14 @@ class ApiV1Test {
 
     @Test
     fun `get user`() {
-        val user = driver.steam.createUser("xxCheetoHunter420xx", "https://slayer.jpg")
+        val user = driver.steam.createUser("xxCheetoHunter420xx", avatar = Uri.of("https://slayer.jpg"))
 
         val response = Request(Method.GET, "/v1/user")
             .asUser(user.id)
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.user, be(
-            UserDtoV1(
-                name = "xxCheetoHunter420xx",
-                avatar = Uri.of("https://slayer.jpg")
-            )
-        ))
+        response.shouldHaveBody(ApiV1.Lenses.user, be(user.toDtoV1()))
     }
 
     @Test
@@ -126,6 +122,41 @@ class ApiV1Test {
 
         driver.achievementsDao[userId, godOfWarData.id, godOfWarAchievement1Data.id].shouldNotBeNull()
             .favourite shouldBe true
+    }
+
+    @Test
+    fun `get friends`() {
+        val friend1 = driver.steam.createUser("tom")
+        val friend2 = driver.steam.createUser("hank")
+        driver.steam.addFriend(userId.toLong(), friendId = friend1.id.toLong())
+        driver.steam.addFriend(userId.toLong(), friendId = friend2.id.toLong())
+
+        val response = Request(Method.GET, "/v1/friends")
+            .asUser(userId)
+            .let(driver)
+
+        response shouldHaveStatus Status.OK
+        response.shouldHaveBody(ApiV1.Lenses.users, containExactlyInAnyOrder(
+            friend1.toDtoV1(), friend2.toDtoV1()
+        ))
+    }
+
+    @Test
+    fun `get achievements for friend`() {
+        driver.steam += godOfWarData
+        driver.steam += godOfWarAchievement1Data
+        driver.steam += godOfWarAchievement2Data
+        driver.steam.unlockAchievement(friendId, godOfWarAchievement2Data, tNow)
+
+        val response = Request(Method.GET, "/v1/games/${godOfWarData.id}/friends/$friendId/achievements")
+            .asUser(userId)
+            .let(driver)
+
+        response shouldHaveStatus Status.OK
+        response.shouldHaveBody(ApiV1.Lenses.achievementStatusList, containExactlyInAnyOrder(
+            AchievementStatusDtoV1(id = godOfWarAchievement1Data.id, unlockedOn = null, unlocked = false),
+            AchievementStatusDtoV1(id = godOfWarAchievement2Data.id, unlockedOn = tNow, unlocked = true)
+        ))
     }
 
     private fun Collection<AchievementDtoV1>.withImageHost(host: Uri) = map {
