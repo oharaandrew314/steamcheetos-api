@@ -8,7 +8,7 @@ import org.http4k.contract.div
 import org.http4k.contract.meta
 import org.http4k.contract.security.Security
 import org.http4k.core.*
-import org.http4k.format.Jackson.auto
+import org.http4k.format.Moshi.auto
 import org.http4k.lens.*
 
 class ApiV1(
@@ -26,13 +26,13 @@ class ApiV1(
 
         val redirectUri = Query.uri().required("redirect_uri")
 
-        val gamesList = Body.auto<List<GameDtoV1>>().toLens()
+        val gamesList = Body.auto<Array<GameDtoV1>>().toLens()
         val game = Body.auto<GameDtoV1>().toLens()
         val achievement = Body.auto<AchievementDtoV1>().toLens()
-        val achievementList = Body.auto<List<AchievementDtoV1>>().toLens()
-        val achievementStatusList = Body.auto<List<AchievementStatusDtoV1>>().toLens()
+        val achievementList = Body.auto<Array<AchievementDtoV1>>().toLens()
+        val achievementStatusList = Body.auto<Array<AchievementStatusDtoV1>>().toLens()
         val user = Body.auto<UserDtoV1>().toLens()
-        val users = Body.auto<List<UserDtoV1>>().toLens()
+        val users = Body.auto<Array<UserDtoV1>>().toLens()
         val text = Body.nonEmptyString(ContentType.TEXT_PLAIN).toLens()
         val updateGame = Body.auto<UpdateGameRequestV1>().toLens()
         val updateAchievement = Body.auto<UpdateAchievementRequestV1>().toLens()
@@ -52,12 +52,12 @@ class ApiV1(
         description = "List games in library"
         tags += Tags.games
         returning(Status.UNAUTHORIZED to "unauthorized user", Status.NOT_FOUND to "user not found")
-        returning(Status.OK, Lenses.gamesList to listOf(Examples.game))
+        returning(Status.OK, Lenses.gamesList to arrayOf(Examples.game))
         security = apiSecurity
     } bindContract Method.GET to { ->
         { request ->
             val userId = authLens(request)
-            val results = service.listGames(userId).map { it.toDtoV1() }
+            val results = service.listGames(userId).map { it.toDtoV1() }.toTypedArray()
 
             Response(Status.OK).with(Lenses.gamesList of results)
         }
@@ -69,12 +69,12 @@ class ApiV1(
         description = "Reload games from steam.  Newly loaded games will not have their achievements synced"
         tags += Tags.games
         returning(Status.UNAUTHORIZED to "unauthorized user", Status.NOT_FOUND to "user not found")
-        returning(Status.OK, Lenses.gamesList to listOf(Examples.game))
+        returning(Status.OK, Lenses.gamesList to arrayOf(Examples.game))
         security = apiSecurity
     } bindContract Method.POST to { ->
         { request ->
             val userId = authLens(request)
-            val results = service.refreshGames(userId).map { it.toDtoV1() }
+            val results = service.refreshGames(userId).map { it.toDtoV1() }.toTypedArray()
 
             Response(Status.OK).with(Lenses.gamesList of results)
         }
@@ -107,7 +107,7 @@ class ApiV1(
         description = "List achievements for game in library"
         tags += Tags.games
         returning(Status.UNAUTHORIZED to "unauthorized user")
-        returning(Status.OK, Lenses.achievementList to listOf(Examples.achievement))
+        returning(Status.OK, Lenses.achievementList to arrayOf(Examples.achievement))
         security = apiSecurity
     } bindContract Method.GET to { gameId, _ ->
         { request ->
@@ -122,11 +122,11 @@ class ApiV1(
         summary = "List Achievements for User"
         tags += Tags.games
         returning(Status.UNAUTHORIZED to "unauthorized user")
-        returning(Status.OK, Lenses.achievementStatusList to listOf(Examples.achievementStatus))
+        returning(Status.OK, Lenses.achievementStatusList to arrayOf(Examples.achievementStatus))
         security = apiSecurity
     } bindContract Method.GET to { gameId, _, userId, _ ->
         {
-            val results = service.listAchievementStatus(userId = userId, gameId = gameId).map { it.toDtoV1() }
+            val results = service.listAchievementStatus(userId = userId, gameId = gameId).map { it.toDtoV1() }.toTypedArray()
             Response(Status.OK).with(Lenses.achievementStatusList of results)
         }
     }
@@ -137,7 +137,7 @@ class ApiV1(
         description = "Load achievements for game from steam"
         tags += Tags.games
         returning(Status.UNAUTHORIZED to "unauthorized user", Status.NOT_FOUND to "game not found")
-        returning(Status.OK, Lenses.achievementList to listOf(Examples.achievement))
+        returning(Status.OK, Lenses.achievementList to arrayOf(Examples.achievement))
         security = apiSecurity
     } bindContract Method.POST to { gameId, _ ->
         { request ->
@@ -220,13 +220,13 @@ class ApiV1(
         summary = "Get Friends"
         security = apiSecurity
         tags += Tags.users
-        returning(Status.OK, Lenses.users to listOf(Examples.user))
+        returning(Status.OK, Lenses.users to arrayOf(Examples.user))
         returning(Status.UNAUTHORIZED to "unauthorized")
     } bindContract Method.GET to { ->
         { request ->
             val userId = authLens(request)
             val friends = service.getFriends(userId).map { it.toDtoV1() }
-            Response(Status.OK).with(Lenses.users of friends)
+            Response(Status.OK).with(Lenses.users of friends.toTypedArray())
         }
     }
 

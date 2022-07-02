@@ -57,7 +57,7 @@ class CheetosService(
 
     fun updateGame(userId: String, gameId: String, favourite: Boolean): Game? {
         return gamesDao[userId, gameId]
-            ?.copy(favourite =  favourite)
+            ?.copy(favourite = favourite)
             ?.also { gamesDao += it }
     }
 

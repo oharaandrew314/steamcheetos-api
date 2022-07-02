@@ -5,18 +5,21 @@ import io.andrewohara.cheetosbros.api.auth.*
 import io.andrewohara.cheetosbros.api.v1.*
 import io.andrewohara.cheetosbros.games.*
 import io.andrewohara.cheetosbros.sources.steam.SteamClient
-import io.andrewohara.dynamokt.DataClassTableSchema
 import io.andrewohara.utils.http4k.ContractUi
 import io.andrewohara.utils.http4k.logErrors
+import org.http4k.connect.amazon.dynamodb.DynamoDb
+import org.http4k.connect.amazon.dynamodb.model.TableName
 import org.http4k.contract.contract
 import org.http4k.contract.openapi.ApiInfo
+import org.http4k.contract.openapi.ApiRenderer
+import org.http4k.contract.openapi.v3.AutoJsonToJsonSchema
 import org.http4k.contract.openapi.v3.OpenApi3
 import org.http4k.contract.security.BearerAuthSecurity
 import org.http4k.core.*
 import org.http4k.filter.*
+import org.http4k.format.*
 import org.http4k.lens.RequestContextKey
 import org.http4k.routing.*
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -24,7 +27,7 @@ import java.util.concurrent.Executors
 object ServiceBuilder {
 
     fun gameService(
-        dynamo: DynamoDbEnhancedClient,
+        dynamo: DynamoDb,
         gamesTableName: String,
         achievementsTableName: String,
         clock: Clock = Clock.systemUTC(),
@@ -35,8 +38,8 @@ object ServiceBuilder {
         syncTimeout: Duration = Duration.ofSeconds(10),
         imageCdnHost: Uri
     ) = CheetosService(
-        gamesDao = GamesDao(dynamo, dynamo.table(gamesTableName, DataClassTableSchema(Game::class))),
-        achievementsDao = AchievementsDao(dynamo, dynamo.table(achievementsTableName, DataClassTableSchema(Achievement::class))),
+        gamesDao = GamesDao(dynamo, TableName.of(gamesTableName)),
+        achievementsDao = AchievementsDao(dynamo, TableName.of(achievementsTableName)),
         clock = clock,
         steam = SteamClient(steamBackend),
         achievementDataRetention = achievementDataRetention,
@@ -73,7 +76,9 @@ object ServiceBuilder {
                     ApiInfo(
                         title = "SteamCheetos API",
                         version = "v1.0"
-                    )
+                    ),
+                    json = Gson,
+                    apiRenderer = ApiRenderer.Auto(Gson, AutoJsonToJsonSchema(Gson))
                 )
                 descriptionPath =  "/swagger.json"
                 routes += ApiV1(cheetosService, authService, authLens, security).routes()

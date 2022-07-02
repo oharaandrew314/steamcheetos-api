@@ -2,7 +2,7 @@ package io.andrewohara.cheetosbros.sources.steam
 
 import io.andrewohara.cheetosbros.sources.*
 import org.http4k.core.*
-import org.http4k.format.Jackson.auto
+import org.http4k.format.Moshi.auto
 import org.http4k.lens.*
 import java.io.IOException
 import java.lang.IllegalStateException

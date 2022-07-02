@@ -1,52 +1,68 @@
 package io.andrewohara.cheetosbros.games
 
+import dev.forkhandles.result4k.onFailure
 import io.andrewohara.cheetosbros.sources.AchievementData
-import io.andrewohara.dynamokt.DynamoKtConverted
-import io.andrewohara.dynamokt.DynamoKtPartitionKey
-import io.andrewohara.dynamokt.DynamoKtSortKey
-import io.andrewohara.utils.dynamodb.v2.batchPut
+import io.andrewohara.lib.batchPutItem
+import org.http4k.connect.amazon.dynamodb.*
+import org.http4k.connect.amazon.dynamodb.model.Attribute
+import org.http4k.connect.amazon.dynamodb.model.Item
+import org.http4k.connect.amazon.dynamodb.model.TableName
+import org.http4k.connect.amazon.dynamodb.model.with
 import org.http4k.core.Uri
-import software.amazon.awssdk.enhanced.dynamodb.*
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
-import software.amazon.awssdk.services.dynamodb.model.AttributeValue
+import org.http4k.format.autoDynamoLens
+import java.io.IOException
 import java.time.Instant
 
-class AchievementsDao(private val client: DynamoDbEnhancedClient, private val table: DynamoDbTable<Achievement>) {
+class AchievementsDao(private val dynamoDb: DynamoDb, private val tableName: TableName) {
+
+    private val lens = DynamoDbMoshi.autoDynamoLens<Achievement>()
+
+    private val libraryIdAttr = Attribute.string().map(
+        nextIn = { LibraryId.parse(it) },
+        nextOut = { it.toString() }
+    ).required("libraryId")
+
+    private val achievementIdAttr = Attribute.string().required("id")
 
     operator fun plusAssign(achievements: Collection<Achievement>) {
-        table.batchPut(client, achievements)
+        dynamoDb.batchPutItem(tableName, achievements, lens)
+            .onFailure { throw IOException("Error putting achievements: $it") }
     }
 
     operator fun plusAssign(achievement: Achievement) {
-        table.putItem(achievement)
+        val item = Item().with(lens of achievement)
+        dynamoDb.putItem(tableName, item)
+            .onFailure { throw IOException("Error putting achievement: $it") }
     }
 
     operator fun get(userId: String, gameId: String): Collection<Achievement> {
-        val key = Key.builder()
-            .partitionValue("$userId:$gameId")
-            .build()
+        val libraryId = LibraryId(userId, gameId)
 
-        return table.query(QueryConditional.keyEqualTo(key))
-            .asSequence()
-            .flatMap { it.items() }
+        return dynamoDb.queryPaginated(
+            TableName = tableName,
+            KeyConditionExpression = "$libraryIdAttr = :val1",
+            ExpressionAttributeValues = mapOf(":val1" to libraryIdAttr.asValue(libraryId))
+        )
+            .flatMap { page -> page.onFailure { throw IOException("Error listing achievements: $it") } }
+            .map(lens)
             .toList()
     }
 
     operator fun get(userId: String, gameId: String, achievementId: String): Achievement? {
-        val key = Key.builder()
-            .partitionValue("$userId:$gameId")
-            .sortValue(achievementId)
-            .build()
-
-        return table.getItem(key)
+        return dynamoDb.getItem(
+            TableName = tableName,
+            Key = Item(
+                libraryIdAttr of LibraryId(userId, gameId),
+                achievementIdAttr of achievementId
+            ))
+            .onFailure { throw IOException("Error getting achievements: $it") }
+            .item
+            ?.let(lens)
     }
 }
 
 data class Achievement(
-    @DynamoKtPartitionKey
-    @DynamoKtConverted(LibraryIdConverter::class)
-    val libraryId: LibraryId,
-    @DynamoKtSortKey
+    val libraryId: String,
     val id: String,
 
     val name: String,
@@ -54,16 +70,14 @@ data class Achievement(
     val hidden: Boolean,
     val unlockedOn: Instant?,
 
-    @DynamoKtConverted(UriConverter::class)
     val iconLocked: Uri,
-    @DynamoKtConverted(UriConverter::class)
     val iconUnlocked: Uri,
 
     val favourite: Boolean = false,
 )
 
 fun Achievement.toData() = AchievementData(
-    gameId = libraryId.gameId,
+    gameId = LibraryId.parse(libraryId).gameId,
     id = id,
     name = name,
     description = description,
@@ -73,7 +87,7 @@ fun Achievement.toData() = AchievementData(
 )
 
 fun AchievementData.toAchievement(userId: String, unlockedOn: Instant?) = Achievement(
-    libraryId = LibraryId(userId, gameId),
+    libraryId = LibraryId(userId, gameId).toString(),
     id = id,
     name = name,
     description = description,
@@ -86,27 +100,13 @@ fun AchievementData.toAchievement(userId: String, unlockedOn: Instant?) = Achiev
 data class LibraryId(
     val userId: String,
     val gameId: String,
-)
-
-class LibraryIdConverter: AttributeConverter<LibraryId> {
-    override fun transformFrom(input: LibraryId): AttributeValue = AttributeValue.fromS("${input.userId}:${input.gameId}")
-
-    override fun transformTo(input: AttributeValue): LibraryId {
-        val (userId, gameId) = input.s().split(":")
-        return LibraryId(userId, gameId)
+) {
+    companion object {
+        fun parse(value: String): LibraryId {
+            val (userId, gameId) = value.split(":")
+            return LibraryId(userId, gameId)
+        }
     }
 
-    override fun type(): EnhancedType<LibraryId> = EnhancedType.of(LibraryId::class.java)
-
-    override fun attributeValueType(): AttributeValueType = AttributeValueType.S
-}
-
-class UriConverter: AttributeConverter<Uri> {
-    override fun transformFrom(input: Uri): AttributeValue  = AttributeValue.fromS(input.toString())
-
-    override fun transformTo(input: AttributeValue) = Uri.of(input.s())
-
-    override fun type(): EnhancedType<Uri> = EnhancedType.of(Uri::class.java)
-
-    override fun attributeValueType(): AttributeValueType = AttributeValueType.S
+    override fun toString() = "$userId:$gameId"
 }

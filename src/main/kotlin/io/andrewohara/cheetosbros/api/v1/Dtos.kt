@@ -55,7 +55,7 @@ fun Achievement.toDtoV1() = AchievementDtoV1(
     favourite = favourite
 )
 
-fun Collection<Achievement>.toDtoV1s() = map { it.toDtoV1() }
+fun Collection<Achievement>.toDtoV1s() = map { it.toDtoV1() }.toTypedArray()
 
 fun Game.toDtoV1() = GameDtoV1(
     id = id,

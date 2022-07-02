@@ -3,8 +3,8 @@ package io.andrewohara.cheetosbros.api.v1
 import io.andrewohara.cheetosbros.*
 import io.andrewohara.cheetosbros.games.withHost
 import io.kotest.matchers.be
-import io.kotest.matchers.collections.containExactly
-import io.kotest.matchers.collections.containExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.http4k.core.*
@@ -36,7 +36,8 @@ class ApiV1Test {
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.gamesList, containExactly(created.game.toDtoV1().withImageHost(testCdnHost)))
+        ApiV1.Lenses.gamesList(response).toList()
+            .shouldContainExactly(created.game.toDtoV1().withImageHost(testCdnHost))
     }
 
     @Test
@@ -48,7 +49,8 @@ class ApiV1Test {
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.achievementList, containExactlyInAnyOrder(created.achievements.toDtoV1s().withImageHost(testCdnHost)))
+        ApiV1.Lenses.achievementList(response)
+            .shouldContainExactlyInAnyOrder(created.achievements.toDtoV1s().withImageHost(testCdnHost))
     }
 
     @Test
@@ -136,9 +138,8 @@ class ApiV1Test {
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.users, containExactlyInAnyOrder(
-            friend1.toDtoV1(), friend2.toDtoV1()
-        ))
+        ApiV1.Lenses.users(response).toList()
+            .shouldContainExactlyInAnyOrder(friend1.toDtoV1(), friend2.toDtoV1())
     }
 
     @Test
@@ -153,18 +154,18 @@ class ApiV1Test {
             .let(driver)
 
         response shouldHaveStatus Status.OK
-        response.shouldHaveBody(ApiV1.Lenses.achievementStatusList, containExactlyInAnyOrder(
+        ApiV1.Lenses.achievementStatusList(response).toList().shouldContainExactlyInAnyOrder(
             AchievementStatusDtoV1(id = godOfWarAchievement1Data.id, unlockedOn = null, unlocked = false),
             AchievementStatusDtoV1(id = godOfWarAchievement2Data.id, unlockedOn = tNow, unlocked = true)
-        ))
+        )
     }
 
-    private fun Collection<AchievementDtoV1>.withImageHost(host: Uri) = map {
+    private fun Array<AchievementDtoV1>.withImageHost(host: Uri) = map {
         it.copy(
             iconLocked = Uri.of(it.iconLocked).withHost(host).toString(),
             iconUnlocked = Uri.of(it.iconUnlocked).withHost(host).toString()
         )
-    }
+    }.toTypedArray()
 
     private fun GameDtoV1.withImageHost(host: Uri) = copy(
         displayImage = Uri.of(displayImage).withHost(host).toString()

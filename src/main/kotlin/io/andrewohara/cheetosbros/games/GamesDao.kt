@@ -1,55 +1,60 @@
 package io.andrewohara.cheetosbros.games
 
+import dev.forkhandles.result4k.map
+import dev.forkhandles.result4k.onFailure
 import io.andrewohara.cheetosbros.sources.GameData
-import io.andrewohara.dynamokt.DynamoKtConverted
-import io.andrewohara.dynamokt.DynamoKtPartitionKey
-import io.andrewohara.dynamokt.DynamoKtSortKey
-import io.andrewohara.utils.dynamodb.v2.batchPut
+import io.andrewohara.lib.batchPutItem
+import org.http4k.connect.amazon.dynamodb.*
+import org.http4k.connect.amazon.dynamodb.model.*
 import org.http4k.core.Uri
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable
-import software.amazon.awssdk.enhanced.dynamodb.Key
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional
+import org.http4k.format.autoDynamoLens
+import java.io.IOException
 import java.time.Instant
 
-class GamesDao(private val client: DynamoDbEnhancedClient, private val table: DynamoDbTable<Game>) {
+class GamesDao(private val dynamo: DynamoDb, private val tableName: TableName) {
+
+    private val lens = DynamoDbMoshi.autoDynamoLens<Game>()
+    private val userIdAttr = Attribute.string().required("userId")
+    private val gameIdAttr = Attribute.string().required("id")
 
     operator fun get(userId: String): List<Game> {
-        val key = Key.builder().partitionValue(userId).build()
-
-        return table.query(QueryConditional.keyEqualTo(key))
-            .flatMap { it.items() }
+        return dynamo.queryPaginated(
+            TableName = tableName,
+            KeyConditionExpression = "$userIdAttr = :val1",
+            ExpressionAttributeValues = mapOf(":val1" to userIdAttr.asValue(userId))
+        )
+            .flatMap { it.onFailure { e -> throw IOException("Error querying items: $e") }.map(lens) }
             .toList()
     }
 
     operator fun get(userId: String, gameId: String): Game? {
-        val key = Key.builder()
-            .partitionValue(userId)
-            .sortValue(gameId)
-            .build()
-
-        return table.getItem(key)
+        return dynamo.getItem(
+            TableName = tableName,
+            Key = Item(userIdAttr of userId, gameIdAttr of gameId)
+        )
+            .map { it.item?.let(lens) }
+            .onFailure { throw IOException("Error getting item: $it") }
     }
 
     operator fun plusAssign(game: Game) {
-        table.putItem(game)
+        val item = Item().with(lens of game)
+        dynamo.putItem(
+            TableName = tableName,
+            Item = item
+        ).onFailure { throw IOException("Error putting item: $it") }
     }
 
     operator fun plusAssign(games: Collection<Game>) {
-        table.batchPut(client, games)
+        dynamo.batchPutItem(tableName, games, lens)
+            .onFailure { throw IOException("Error putting items: $it") }
     }
 }
 
 data class Game(
-    @DynamoKtPartitionKey
     val userId: String,
-
-    @DynamoKtSortKey
     val id: String,
 
-    @DynamoKtConverted(UriConverter::class)
     val displayImage: Uri,
-
     val name: String,
 
     val achievementsTotal: Int?,
